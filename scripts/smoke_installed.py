@@ -54,8 +54,8 @@ def check_robot(path: Path) -> None:
     for joint in wheels:
         child = joint.find('child').attrib['link']
         link = robot.find(f"link[@name='{child}']")
-        cylinder = link.find('./collision/geometry/cylinder')
-        assert math.isclose(float(cylinder.attrib['radius']), 0.11)
+        for shape in ('./visual/geometry/cylinder', './collision/geometry/sphere'):
+            assert math.isclose(float(link.find(shape).attrib['radius']), 0.11)
         positions.append(list(map(float, joint.find('origin').attrib['xyz'].split())))
     assert math.isclose(abs(positions[0][1] - positions[1][1]), 0.64)
     assert math.isclose(
