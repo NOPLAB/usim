@@ -12,7 +12,7 @@ dependencies = []
 usim = "usim.cli:main"
 
 [project.optional-dependencies]
-usd = ["usd-core==25.5", "numpy>=1.26,<2"]
+usd = ["usd-core==25.11", "numpy>=1.26,<2"]
 isaac = [
   "isaacsim[all,extscache]==6.1.0.0; python_version == '3.12'",
   "numpy==2.3.1; python_version == '3.12'",

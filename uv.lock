@@ -2,15 +2,17 @@ version = 1
 revision = 3
 requires-python = ">=3.10, <3.13"
 resolution-markers = [
-    "sys_platform == 'win32' and extra != 'extra-4-usim-isaac' and extra == 'extra-4-usim-usd'",
     "python_full_version >= '3.12' and sys_platform == 'win32' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version >= '3.12' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "python_full_version >= '3.11' and sys_platform == 'win32' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version >= '3.11' and sys_platform == 'linux' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "sys_platform == 'win32' and extra != 'extra-4-usim-isaac' and extra == 'extra-4-usim-usd'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version < '3.11' and sys_platform == 'win32' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "python_full_version < '3.11' and sys_platform == 'win32' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "sys_platform == 'linux' and extra != 'extra-4-usim-isaac' and extra == 'extra-4-usim-usd'",
-    "python_full_version >= '3.12' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
-    "python_full_version < '3.12' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
-    "python_full_version >= '3.11' and sys_platform == 'linux' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version < '3.11' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "python_full_version < '3.11' and sys_platform == 'linux' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
 ]
 supported-markers = [
@@ -715,7 +717,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (python_full_version == '3.11.*' and extra == 'extra-4-usim-isaac') or (python_full_version == '3.11.*' and extra == 'extra-4-usim-usd') or (python_full_version >= '3.12' and extra == 'extra-4-usim-usd')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or extra == 'extra-4-usim-usd'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -1784,10 +1786,10 @@ version = "1.26.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "sys_platform == 'win32' and extra != 'extra-4-usim-isaac' and extra == 'extra-4-usim-usd'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version < '3.11' and sys_platform == 'win32' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "python_full_version < '3.11' and sys_platform == 'win32' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "sys_platform == 'linux' and extra != 'extra-4-usim-isaac' and extra == 'extra-4-usim-usd'",
-    "python_full_version < '3.12' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version < '3.11' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "python_full_version < '3.11' and sys_platform == 'linux' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/55/b3/b13bce39ba82b7398c06d10446f5ffd5c07db39b09bd37370dc720c7951c/numpy-1.26.0.tar.gz", hash = "sha256:f93fc78fe8bf15afe2b8d6b6499f1c73953169fad1e9a8dd086cdff3190e7fdf", size = 15633455, upload-time = "2023-09-16T20:12:58.065Z" }
@@ -1815,9 +1817,11 @@ version = "2.3.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.12' and sys_platform == 'win32' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
-    "python_full_version >= '3.11' and sys_platform == 'win32' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "python_full_version >= '3.12' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version >= '3.11' and sys_platform == 'win32' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
     "python_full_version >= '3.11' and sys_platform == 'linux' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
+    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2e/19/d7c972dfe90a353dbd3efbbe1d14a5951de80c99c9dc1b93cd998d51dc0f/numpy-2.3.1.tar.gz", hash = "sha256:1ec9ae20a4226da374362cca3c62cd753faf2f951440b0e3b98e93c235441d2b", size = 20390372, upload-time = "2025-06-21T12:28:33.469Z" }
 wheels = [
@@ -2978,15 +2982,15 @@ wheels = [
 
 [[package]]
 name = "usd-core"
-version = "25.5"
+version = "25.11"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/12/3d70833604034caa25cdf78d1171a095db18f7a1deaaddcbd28026fd306e/usd_core-25.5-cp310-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0a2772178cdfbab26bc34bdaf5c88a2831886f94b0ced0264239eb8ac0f4c0d1", size = 26913387, upload-time = "2025-04-28T22:52:58.262Z" },
-    { url = "https://files.pythonhosted.org/packages/38/da/69b6f4a76a8ec66c8827133e40d70db1d5c510f43ddac2f5934edd147f0e/usd_core-25.5-cp310-none-win_amd64.whl", hash = "sha256:448e87f7330623233e50fa7fbb112e3247ce23261e9f5f223b7a42454b33c65b", size = 13882407, upload-time = "2025-04-28T22:53:01.557Z" },
-    { url = "https://files.pythonhosted.org/packages/6d/42/4317732adc663215d76ba4b3840411c25e47f73478b9788771f128a236d1/usd_core-25.5-cp311-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0a66bfa5fbd3b0b6009e60d6781b4b3fa0bae67de20a7893811aab7ec4802b9d", size = 26910224, upload-time = "2025-04-28T22:53:10.709Z" },
-    { url = "https://files.pythonhosted.org/packages/0a/27/c3cc3a5f6f708bdf8934fb8d2993161e0855b62f68389d8838bf3147eda6/usd_core-25.5-cp311-none-win_amd64.whl", hash = "sha256:38ecd693d0c750eb4e63370834c763f50f243b2580d99cebde993cdd1706ea3a", size = 13882801, upload-time = "2025-04-28T22:53:13.491Z" },
-    { url = "https://files.pythonhosted.org/packages/7c/13/8b6a8092eaea871ba78d64772a6ce8ce0a72833769353cb8bf054c91fc2f/usd_core-25.5-cp312-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6d4dbc80fc6dbbfe1e42cebcb61801197e62490a447ad4f7d946427c802c2037", size = 26817605, upload-time = "2025-04-28T22:53:21.099Z" },
-    { url = "https://files.pythonhosted.org/packages/25/bf/11b0aec6f7c75ee4c671aeb623702847f3ad46bdbb0e62c44d27b60746b0/usd_core-25.5-cp312-none-win_amd64.whl", hash = "sha256:12dcd6f15a4c24bf3b48807f8c04116054a2fa8173bb6319b8e787ca800df0b7", size = 13918710, upload-time = "2025-04-28T22:53:26.81Z" },
+    { url = "https://files.pythonhosted.org/packages/91/2b/5a88e24d3d5289feaa62b3a996fdeaa96e66029acd5b218298944573f2ba/usd_core-25.11-cp310-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2e7fe932069500056510c0881ed4627b654180d2fdb39998f78391cf0d701b1f", size = 27524067, upload-time = "2025-10-24T19:01:08.909Z" },
+    { url = "https://files.pythonhosted.org/packages/2b/0a/97b7ee04769171ccb7f6c27ae3a10cf461d4b924b48b2453423c9276747e/usd_core-25.11-cp310-none-win_amd64.whl", hash = "sha256:78aa4e5308042bb2f2358480f0ca3f4b416fbeb8363fbcf74bea527d7f8ba0ce", size = 13026494, upload-time = "2025-10-24T19:01:12.535Z" },
+    { url = "https://files.pythonhosted.org/packages/78/6a/fe4feefe867e92e3c657c38bc0041a2b39e035f7fdf37b4d9394c959871e/usd_core-25.11-cp311-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a971c76ee4470a318df0517109fa8302f4bfa4f42c1f26b011658bb2ae6b6fa4", size = 27516181, upload-time = "2025-10-24T19:01:18.508Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/12/50ab94ef969c4f9cfd08a9086ebd544e9fa3caadd57587e8851e612f2805/usd_core-25.11-cp311-none-win_amd64.whl", hash = "sha256:dff4cf30a36659ce8ddf35b8d013ee02516487174aafa806938c34a782cde89c", size = 13027051, upload-time = "2025-10-24T19:01:21.832Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/f1/dbf18bee5b569a06119f0cde798daeef4837887594a0caf415eb1d75112a/usd_core-25.11-cp312-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c05c05150f6c4598e0738677f0b7c8f82ff9fc492d040ed78147eb1ad5ce8545", size = 27393145, upload-time = "2025-10-24T19:01:27.841Z" },
+    { url = "https://files.pythonhosted.org/packages/48/34/dd9883f27526288de19741100cb5b75f2725423367a999c055a677d1d88a/usd_core-25.11-cp312-none-win_amd64.whl", hash = "sha256:7bc5aaad20287bfc821e73e2ced99123e448e40ffd018acf99b09975eab4012d", size = 13061673, upload-time = "2025-10-24T19:01:30.396Z" },
 ]
 
 [[package]]
@@ -3022,8 +3026,8 @@ usd = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "numpy", version = "1.26.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (python_full_version == '3.11.*' and extra == 'extra-4-usim-isaac') or (python_full_version == '3.11.*' and extra == 'extra-4-usim-usd') or (python_full_version >= '3.12' and extra == 'extra-4-usim-usd')" },
-    { name = "numpy", version = "2.3.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and extra == 'extra-4-usim-isaac') or (python_full_version >= '3.12' and extra != 'extra-4-usim-usd') or (python_full_version < '3.11' and extra == 'extra-4-usim-isaac' and extra == 'extra-4-usim-usd') or (python_full_version == '3.11.*' and extra == 'extra-4-usim-isaac' and extra == 'extra-4-usim-usd') or (python_full_version == '3.11.*' and extra != 'extra-4-usim-isaac' and extra != 'extra-4-usim-usd')" },
+    { name = "numpy", version = "1.26.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or extra == 'extra-4-usim-usd'" },
+    { name = "numpy", version = "2.3.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-4-usim-isaac') or (python_full_version >= '3.11' and extra != 'extra-4-usim-usd') or (extra == 'extra-4-usim-isaac' and extra == 'extra-4-usim-usd')" },
     { name = "pytest" },
     { name = "ruff" },
 ]
@@ -3033,7 +3037,7 @@ requires-dist = [
     { name = "isaacsim", extras = ["all", "extscache"], marker = "python_full_version == '3.12.*' and extra == 'isaac'", specifier = "==6.1.0.0" },
     { name = "numpy", marker = "python_full_version == '3.12.*' and extra == 'isaac'", specifier = "==2.3.1" },
     { name = "numpy", marker = "extra == 'usd'", specifier = ">=1.26,<2" },
-    { name = "usd-core", marker = "extra == 'usd'", specifier = "==25.5" },
+    { name = "usd-core", marker = "extra == 'usd'", specifier = "==25.11" },
 ]
 provides-extras = ["usd", "isaac"]
 
