@@ -1,0 +1,23 @@
+# General ROS 2 Humble / Gazebo Classic 11 runtime; no inference layers.
+# Run gzserver with any world path and a supplied robot description.
+FROM osrf/ros:humble-desktop-full
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+SHELL ["/bin/bash", "-c"]
+
+# --------------------------------------------------------------- system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ros-humble-gazebo-ros-pkgs \
+        ros-humble-robot-state-publisher \
+        ros-humble-xacro \
+        xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Checkout resources, not the Python 3.12 usim wheel (Humble uses 3.10).
+COPY worlds /opt/usim/worlds
+ENV USIM_ROOT=/opt/usim
+RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
+WORKDIR /workspace
+CMD ["/bin/bash"]

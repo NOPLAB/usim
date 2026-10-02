@@ -1,0 +1,53 @@
+[project]
+name = "usim"
+version = "0.1.0"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "nop", email = "noplab90@gmail.com" }]
+description = "Mobile robot simulation with a Python core, ROS 2 bridge and engine ports"
+requires-python = ">=3.10,<3.13"
+dependencies = []
+
+[project.scripts]
+usim = "usim.cli:main"
+
+[project.optional-dependencies]
+usd = ["usd-core==25.5", "numpy>=1.26,<2"]
+isaac = [
+  "isaacsim[all,extscache]==6.1.0.0; python_version == '3.12'",
+  "numpy==2.3.1; python_version == '3.12'",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.1,<10", "numpy>=1.26,<3", "ruff==0.16.9"]
+
+[tool.uv]
+extra-index-url = ["https://pypi.nvidia.com"]
+index-strategy = "unsafe-best-match"
+prerelease = "allow"
+environments = ["sys_platform == 'win32'", "sys_platform == 'linux'"]
+conflicts = [
+  [{ extra = "usd" }, { extra = "isaac" }],
+]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/usim"]
+
+[tool.ruff]
+required-version = "==0.16.9"
+target-version = "py310"
+line-length = 99
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = ["test_*.py"]
