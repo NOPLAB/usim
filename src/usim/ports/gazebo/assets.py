@@ -71,9 +71,13 @@ def prepare_assets(
     joints = {joint.get('name'): joint for joint in robot.findall('joint')}
     if configuration.base_link not in links:
         raise ValueError(f'base link not found: {configuration.base_link}')
-    for name in (configuration.left_joint, configuration.right_joint):
+    for name in configuration.left_wheel_joints + configuration.right_wheel_joints:
         joint = joints.get(name)
-        if joint is None or joint.get('type') not in ('continuous', 'revolute'):
+        if (
+            joint is None
+            or sum(item.get('name') == name for item in robot.findall('joint')) != 1
+            or joint.get('type') not in ('continuous', 'revolute')
+        ):
             raise ValueError(f'wheel joint must exist and rotate: {name}')
         for end in ('parent', 'child'):
             reference = joint.find(end)
@@ -99,6 +103,26 @@ def prepare_assets(
         if value.startswith('model://'):
             if source == robot_path:
                 raise ValueError(f'URDF mesh must be a file or package URI: {value}')
+            model_path = PurePosixPath(value.removeprefix('model://'))
+            if (
+                not model_path.parts
+                or model_path.is_absolute()
+                or any(part in {'.', '..'} or ':' in part for part in model_path.parts)
+            ):
+                raise ValueError(f'invalid model URI in {source}: {value}')
+            model_name = model_path.parts[0]
+            folder = next(
+                (
+                    candidate
+                    for parent in source.parents
+                    for candidate in (parent / 'models', parent)
+                    if (candidate / model_name).is_dir()
+                    and (candidate / model_name / 'model.config').is_file()
+                ),
+                None,
+            )
+            if folder is not None:
+                mount(folder)
             return value
         if value.startswith('package://'):
             path, folder = _package_path(value, source)
@@ -142,11 +166,16 @@ def prepare_assets(
         ET.SubElement(ros_element, 'namespace').text = '/'
         ET.SubElement(ros_element, 'remapping').text = f'cmd_vel:={private_topic}'
         ET.SubElement(ros_element, 'remapping').text = f'odom:={ros.odom_topic}'
+        ET.SubElement(plugin, 'num_wheel_pairs').text = str(len(configuration.left_wheel_joints))
+        for left, right in zip(configuration.left_wheel_joints, configuration.right_wheel_joints):
+            for name, value in {
+                'left_joint': left,
+                'right_joint': right,
+                'wheel_diameter': 2 * configuration.wheel_radius,
+                'wheel_separation': configuration.wheel_separation,
+            }.items():
+                ET.SubElement(plugin, name).text = str(value)
         for name, value in {
-            'left_joint': configuration.left_joint,
-            'right_joint': configuration.right_joint,
-            'wheel_diameter': 2 * configuration.wheel_radius,
-            'wheel_separation': configuration.wheel_separation,
             'max_wheel_torque': 20,
             'max_wheel_acceleration': 10,
             'update_rate': 100,

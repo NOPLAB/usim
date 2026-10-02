@@ -22,18 +22,35 @@ from dataclasses import replace
 
 class StandaloneIsaacTest(unittest.TestCase):
     def test_custom_robot_runs_without_ros_and_closes(self):
+        self.exercise_robot()
+
+    def test_paired_wheels_receive_synchronized_actions(self):
+        self.exercise_robot(paired=True)
+
+    def test_paired_wheel_selection_rejects_missing_duplicate_and_aliased_joints(self):
+        for invalid in ('missing', 'duplicate', 'index'):
+            with self.subTest(invalid=invalid):
+                self.exercise_robot(paired=True, invalid=invalid)
+
+    def exercise_robot(self, paired=False, invalid=None):
         actions = []
         references = []
         imports = []
         settings = []
         camera_poses = []
+        left_names = ('drive_left', 'rear_left') if paired else ('drive_left',)
+        right_names = ('drive_right', 'rear_right') if paired else ('drive_right',)
+        names = left_names + right_names
+        indices = dict(zip(names, (2, 0, 3, 1) if paired else (0, 1)))
+        if invalid == 'index':
+            indices['rear_right'] = indices['rear_left']
         robot = NS(
-            get_dof_index=lambda name: {'drive_left': 0, 'drive_right': 1}[name],
+            get_dof_index=indices.__getitem__,
             apply_action=actions.append,
             get_world_pose=lambda: (np.array([1.0, 2.0, 3.0]), np.array([1.0, 0, 0, 0])),
             get_linear_velocity=lambda: np.zeros(3),
             get_angular_velocity=lambda: np.zeros(3),
-            get_joint_velocities=lambda: np.zeros(2),
+            get_joint_velocities=lambda: np.arange(len(names), dtype=float),
         )
 
         class App:
@@ -68,9 +85,12 @@ class StandaloneIsaacTest(unittest.TestCase):
         prims = [
             Prim('/World/Environment/Wall', 'Wall', 'collision'),
             Prim('/World/Custom/Base', 'Base', 'articulation'),
-            Prim('/World/Custom/drive_left', 'drive_left', 'drive'),
-            Prim('/World/Custom/drive_right', 'drive_right', 'drive'),
+            *[Prim(f'/World/Custom/{name}', name, 'drive') for name in names],
         ]
+        if invalid == 'missing':
+            prims.pop()
+        elif invalid == 'duplicate':
+            prims.append(Prim('/World/Custom/Extra/rear_right', 'rear_right', 'drive'))
         stage = NS(
             GetPrimAtPath=lambda path: prims[1], Load=lambda: None, Traverse=lambda: iter(prims)
         )
@@ -152,11 +172,25 @@ class StandaloneIsaacTest(unittest.TestCase):
                 robot_name='custom',
                 left_joint='drive_left',
                 right_joint='drive_right',
+                left_joints=left_names if paired else None,
+                right_joints=right_names if paired else None,
                 camera_offset=(0.3, 0.2, 0.5),
                 camera_width=4,
                 camera_height=3,
             )
             output = io.StringIO()
+            if invalid:
+                with (
+                    patch.dict(sys.modules, modules),
+                    contextlib.redirect_stdout(output),
+                    self.assertRaisesRegex(
+                        RuntimeError, 'wheel drive missing|wheel joints missing'
+                    ),
+                ):
+                    _run(config, IsaacSimulator(robot_prim_path='/World/Custom'))
+                self.assertEqual(actions[-1], 'close')
+                self.assertEqual(json.loads(output.getvalue().splitlines()[-1])['status'], 'error')
+                return
             with (
                 patch.dict(sys.modules, {**modules, 'rclpy': None, 'rvln_msgs': None}),
                 patch('usim.ports.isaac.sim.time.monotonic', return_value=1.0),
@@ -196,6 +230,29 @@ class StandaloneIsaacTest(unittest.TestCase):
                     IsaacSimulator(robot_prim_path='/World/Custom'),
                 )
             self.assertEqual(actions[-3:], ['destroy_bridge', 'ros_shutdown', 'close'])
+            bridge.gate.sample = lambda: Velocity(0.2, 0.5)
+            driven_output = io.StringIO()
+            with (
+                patch.dict(sys.modules, {**modules, 'rclpy': ros}),
+                patch('usim.ports.isaac.sim._load_ros_python'),
+                patch('usim.bridges.ros2.Bridge', return_value=bridge),
+                contextlib.redirect_stdout(driven_output),
+            ):
+                _run(
+                    replace(config, ros=Ros2Config(), camera_enabled=False),
+                    IsaacSimulator(robot_prim_path='/World/Custom'),
+                )
+            action = next(item for item in reversed(actions) if hasattr(item, 'joint_indices'))
+            np.testing.assert_array_equal(action.joint_indices, [indices[name] for name in names])
+            np.testing.assert_allclose(
+                action.joint_velocities, [1.5] * len(left_names) + [3.5] * len(right_names)
+            )
+            driven_report = json.loads(driven_output.getvalue().splitlines()[-1])
+            self.assertEqual(driven_report['driven_steps'], 1)
+            self.assertEqual(driven_report['wheel_velocities'], [indices[name] for name in names])
+            self.assertEqual(
+                driven_report['peak_wheel_velocities'], [indices[name] for name in names]
+            )
         report = json.loads(
             [line for line in output.getvalue().splitlines() if line.startswith('{')][-1]
         )
@@ -204,9 +261,14 @@ class StandaloneIsaacTest(unittest.TestCase):
             ('finished', 1, 1),
         )
         self.assertEqual(report['command_count'], 0)
-        self.assertEqual(references, ['/World/Environment', '/World/Custom'] * 3)
+        first_action = next(item for item in actions if hasattr(item, 'joint_indices'))
+        np.testing.assert_array_equal(
+            first_action.joint_indices, [indices[name] for name in names]
+        )
+        np.testing.assert_array_equal(first_action.joint_velocities, np.zeros(len(names)))
+        self.assertEqual(references, ['/World/Environment', '/World/Custom'] * 4)
         self.assertEqual(
-            imports[0]['joint_target_type'], {'^(drive_left|drive_right)$': 'velocity'}
+            imports[0]['joint_target_type'], {'^(' + '|'.join(names) + ')$': 'velocity'}
         )
         np.testing.assert_allclose(camera_poses[0]['positions'], [[1.3, 2.2, 3.5]])
         self.assertEqual(actions[-1], 'close')

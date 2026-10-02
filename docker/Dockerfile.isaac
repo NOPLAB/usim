@@ -1,0 +1,16 @@
+# usim runtime on NVIDIA's official Isaac Sim container.
+# Build from the usim repository root.
+ARG ISAAC_SIM_IMAGE=nvcr.io/nvidia/isaac-sim:6.1.0
+FROM ${ISAAC_SIM_IMAGE}
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/workspace/usim/src \
+    USIM_ROOT=/workspace/usim
+
+WORKDIR /workspace/usim
+COPY src/usim /workspace/usim/src/usim
+COPY worlds /workspace/usim/worlds
+
+ENTRYPOINT ["/bin/bash", "-lc", "if [[ \"${ACCEPT_EULA:-}\" != \"Y\" ]]; then echo 'Set ACCEPT_EULA=Y only after accepting NVIDIA Isaac Sim terms.' >&2; exit 2; fi; exec /isaac-sim/python.sh -m usim.cli \"$@\"", "usim"]
+CMD ["--help"]

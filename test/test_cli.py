@@ -9,6 +9,31 @@ from usim.ports.isaac.cli import configured
 
 
 class CliTest(unittest.TestCase):
+    def test_wheel_groups_override_singular_flags(self):
+        args = build_parser().parse_args(
+            [
+                'simulate',
+                '--world',
+                'room.sdf',
+                '--robot-urdf',
+                'robot.urdf',
+                '--left-joint',
+                'legacy_l',
+                '--right-joint',
+                'legacy_r',
+                '--left-joints',
+                'lf',
+                'lr',
+                '--right-joints',
+                'rf',
+                'rr',
+            ]
+        )
+        config = configured(args)
+        self.assertEqual(config.left_joints, ('lf', 'lr'))
+        self.assertEqual(config.right_joints, ('rf', 'rr'))
+        self.assertEqual((config.left_joint, config.right_joint), ('legacy_l', 'legacy_r'))
+
     def test_custom_geometry_and_backend_configuration(self):
         parser = build_parser()
         with tempfile.TemporaryDirectory() as directory:

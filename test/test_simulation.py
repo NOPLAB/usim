@@ -2,6 +2,8 @@
 
 import math
 import unittest
+from dataclasses import asdict, replace
+import json
 from pathlib import Path
 
 from usim.simulation import (
@@ -15,6 +17,37 @@ from usim.simulation import (
 
 
 class SimulationTest(unittest.TestCase):
+    def test_wheel_groups_preserve_singular_defaults_and_roundtrip(self):
+        config = SimulationConfig(Path('world'), Path('robot'))
+        self.assertEqual(config.left_wheel_joints, ('left_wheel_joint',))
+        self.assertEqual(config.right_wheel_joints, ('right_wheel_joint',))
+        self.assertEqual(replace(config, left_joint='custom').left_wheel_joints, ('custom',))
+        paired = replace(config, left_joints=('lf', 'lr'), right_joints=('rf', 'rr'))
+        data = asdict(paired)
+        data.update(world='world', robot_urdf='robot', ros=None)
+        restored = SimulationConfig(**json.loads(json.dumps(data)))
+        self.assertEqual(restored.left_joints, ('lf', 'lr'))
+        self.assertEqual(restored.right_joints, ('rf', 'rr'))
+        self.assertEqual(restored.left_joint, config.left_joint)
+
+    def test_wheel_groups_reject_invalid_selections(self):
+        for left, right in (
+            ((), ('r',)),
+            (('l',), ()),
+            (('l', 'l'), ('r', 's')),
+            (('l', 'm'), ('r', 'r')),
+            (('l',), ('l',)),
+            (('l', 'm'), ('r',)),
+            (('',), ('r',)),
+            (('l',), (' ',)),
+        ):
+            with self.subTest(left=left, right=right), self.assertRaises(ConfigurationError):
+                SimulationConfig(
+                    Path('world'), Path('robot'), left_joints=left, right_joints=right
+                )
+        with self.assertRaises(ConfigurationError):
+            SimulationConfig(Path('world'), Path('robot'), left_joints=json.loads('"left"'))
+
     def test_motor_toggle_clears_preexisting_commands(self):
         gate = CommandGate(clock=lambda: 0.0)
         gate.command(Velocity(0.3, 0.2))

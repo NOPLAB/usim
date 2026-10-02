@@ -87,6 +87,8 @@ class GazeboSimulator:
                 ),
                 encoding='utf-8',
             )
+            model_paths = [path for _, path in mounts]
+            model_paths.append('/usr/share/gazebo-11/models')
             command = [
                 'docker',
                 'create',
@@ -104,7 +106,7 @@ class GazeboSimulator:
                 '--env',
                 'GAZEBO_MODEL_DATABASE_URI=',
                 '--env',
-                'GAZEBO_MODEL_PATH=' + ':'.join(p for _, p in mounts),
+                'GAZEBO_MODEL_PATH=' + ':'.join(model_paths),
             ]
             for variable in ('ROS_DOMAIN_ID', 'RMW_IMPLEMENTATION'):
                 if variable in os.environ:

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!--
+  usim wrapper around the pinned Clearpath Husky A200 xacro macro.
+  Upstream source and its BSD-3-Clause notices are fetched separately.
+-->
+<robot name="husky" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find clearpath_platform_description)/urdf/common.urdf.xacro"/>
+  <xacro:include filename="$(find clearpath_platform_description)/urdf/a200/a200.urdf.xacro"/>
+  <xacro:a200/>
+</robot>

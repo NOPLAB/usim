@@ -1,8 +1,12 @@
 """Portable asset regressions; real simulator smoke lives in scripts/smoke_mobile.py."""
 
 from dataclasses import asdict, replace
+import copy
 import json
+import os
 from pathlib import Path
+import runpy
+import subprocess
 import threading
 import xml.etree.ElementTree as ET
 
@@ -60,6 +64,8 @@ def test_custom_drive_geometry_frames_and_topics_are_not_robot_specific(
     root, _ = prepared(config, tmp_path / 'prepared')
     drive = root.find("gazebo/plugin[@name='usim_drive']")
     assert drive is not None
+    assert drive.findtext('num_wheel_pairs') == '1'
+    assert len(drive.findall('left_joint')) == len(drive.findall('right_joint')) == 1
     assert drive.findtext('left_joint') == 'port_axle'
     assert drive.findtext('right_joint') == 'starboard'
     assert float(drive.findtext('wheel_diameter', '')) == pytest.approx(0.34)
@@ -176,6 +182,27 @@ def test_package_mesh_resolves_from_own_manifest(config: SimulationConfig, tmp_p
     assert mounts == [(tmp_path, '/assets/0')]
 
 
+def test_local_model_uri_mounts_sibling_models_directory(
+    config: SimulationConfig, tmp_path: Path
+) -> None:
+    checkout = tmp_path / 'checkout'
+    worlds = checkout / 'worlds'
+    models = checkout / 'models' / 'warehouse_shelf'
+    worlds.mkdir(parents=True)
+    models.mkdir(parents=True)
+    (models / 'model.config').write_text('<model><name>warehouse_shelf</name></model>')
+    (models / 'model.sdf').write_text('<sdf/>')
+    world = worlds / 'warehouse.sdf'
+    world.write_text(
+        '<sdf version="1.6"><world name="warehouse">'
+        '<include><uri>model://warehouse_shelf</uri></include></world></sdf>'
+    )
+    _, mounts = prepared(replace(config, world=world), tmp_path / 'prepared')
+    output = ET.parse(tmp_path / 'prepared' / 'world.sdf').getroot()
+    assert output.findtext('world/include/uri') == 'model://warehouse_shelf'
+    assert mounts == [(worlds, '/assets/0'), (checkout / 'models', '/assets/1')]
+
+
 def test_public_topic_cannot_be_used_as_private_drive(
     config: SimulationConfig, tmp_path: Path
 ) -> None:
@@ -184,7 +211,12 @@ def test_public_topic_cannot_be_used_as_private_drive(
         prepare_assets(config, tmp_path / 'prepared', config.ros.cmd_vel_topic)
 
 
-def test_native_config_roundtrip_and_precancel(config: SimulationConfig, tmp_path: Path) -> None:
+@pytest.mark.parametrize('paired', [False, True])
+def test_native_config_roundtrip_and_precancel(
+    config: SimulationConfig, tmp_path: Path, paired: bool
+) -> None:
+    if paired:
+        config = replace(config, left_joints=('lf', 'lr'), right_joints=('rf', 'rr'))
     fields = asdict(replace(config, ros=None))
     fields['world'], fields['robot_urdf'] = str(config.world), str(config.robot_urdf)
     path = tmp_path / 'config.json'
@@ -204,6 +236,119 @@ def test_native_config_roundtrip_and_precancel(config: SimulationConfig, tmp_pat
     stop = threading.Event()
     stop.set()
     GazeboSimulator(image='not-an-image').run(loaded, stop=stop)
+
+
+def test_container_model_path_keeps_builtin_gazebo_models(
+    config: SimulationConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commands = []
+
+    def run(command, **kwargs):
+        commands.append(list(command))
+        return subprocess.CompletedProcess(command, 0, stdout='')
+
+    class FinishedProcess:
+        def wait(self, timeout=None):
+            return 0
+
+    monkeypatch.setattr(subprocess, 'run', run)
+    monkeypatch.setattr(subprocess, 'Popen', lambda command: FinishedProcess())
+    GazeboSimulator().run(replace(config, headless=True))
+    create = next(command for command in commands if command[:2] == ['docker', 'create'])
+    model_path = next(argument for argument in create if argument.startswith('GAZEBO_MODEL_PATH='))
+    assert model_path.endswith(':/usr/share/gazebo-11/models')
+
+
+@pytest.fixture
+def paired_config(config: SimulationConfig) -> SimulationConfig:
+    robot = ET.parse(config.robot_urdf).getroot()
+    for side in ('left', 'right'):
+        original = robot.find(f"joint[@name='{side}_wheel_joint']")
+        assert original is not None
+        origin = original.find('origin')
+        assert origin is not None
+        xyz = origin.get('xyz', '').split()
+        origin.set('xyz', ' '.join(['0.1', *xyz[1:]]))
+        extra = copy.deepcopy(original)
+        extra.set('name', f'{side}_rear_joint')
+        rear_origin, rear_child = extra.find('origin'), extra.find('child')
+        assert rear_origin is not None and rear_child is not None
+        rear_origin.set('xyz', ' '.join(['-0.1', *xyz[1:]]))
+        rear_child.set('link', f'{side}_rear_link')
+        robot.append(extra)
+        original_link = robot.find(f"link[@name='{side}_wheel_link']")
+        assert original_link is not None
+        link = copy.deepcopy(original_link)
+        link.set('name', f'{side}_rear_link')
+        robot.append(link)
+    ET.ElementTree(robot).write(config.robot_urdf)
+    return replace(
+        config,
+        left_joints=('left_wheel_joint', 'left_rear_joint'),
+        right_joints=('right_wheel_joint', 'right_rear_joint'),
+    )
+
+
+def test_paired_drive_plugin_entries(paired_config: SimulationConfig, tmp_path: Path) -> None:
+    config = paired_config
+    root, _ = prepared(config, tmp_path / 'prepared')
+    drive = root.find("gazebo/plugin[@name='usim_drive']")
+    assert drive is not None
+    assert config.ros is not None
+    assert drive.findtext('num_wheel_pairs') == '2'
+    for tag, values in (
+        ('left_joint', config.left_joints),
+        ('right_joint', config.right_joints),
+        ('wheel_diameter', (str(config.wheel_radius * 2),) * 2),
+        ('wheel_separation', (str(config.wheel_separation),) * 2),
+    ):
+        assert tuple(element.text for element in drive.findall(tag)) == values
+    assert drive.findtext('ros/remapping') == 'cmd_vel:=/private/run_test/cmd_vel'
+    assert config.ros.cmd_vel_topic not in ET.tostring(drive, encoding='unicode').replace(
+        '/private/run_test/cmd_vel', ''
+    )
+    with pytest.raises(ValueError, match='wheel joint must exist and rotate'):
+        prepared(
+            replace(config, left_joints=('left_wheel_joint', 'missing')), tmp_path / 'missing'
+        )
+
+
+@pytest.mark.skipif(
+    not os.environ.get('USIM_GAZEBO_WHEEL_SMOKE'), reason='requires native Gazebo Docker runtime'
+)
+@pytest.mark.parametrize('paired', [False, True])
+def test_native_wheel_smoke(
+    config: SimulationConfig,
+    paired_config: SimulationConfig,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    paired: bool,
+) -> None:
+    # The probe is in the same container, so isolate its Gazebo master and ROS topics
+    # from other sessions sharing the host network.
+    native_run = subprocess.run
+
+    def isolated_run(command, **kwargs):
+        if command[:2] == ['docker', 'create']:
+            command = list(command)
+            command[command.index('--network') + 1] = 'none'
+        return native_run(command, **kwargs)
+
+    monkeypatch.setattr(subprocess, 'run', isolated_run)
+    world = runpy.run_path(str(Path(__file__).parents[1] / 'scripts' / 'smoke_mobile.py'))['WORLD']
+    config.world.write_text(world, encoding='utf-8')
+    if not paired:
+        config.robot_urdf.write_text(render_robot(MobileRobot()), encoding='utf-8')
+    config = replace(
+        paired_config if paired else config,
+        headless=True,
+        camera_width=320,
+        camera_height=240,
+    )
+    output = tmp_path / 'native-smoke'
+    GazeboSimulator(image=os.environ['USIM_GAZEBO_WHEEL_SMOKE']).smoke(config, output)
+    assert json.loads((output / 'smoke.json').read_text())['passed']
 
 
 @pytest.mark.parametrize('cancelled', [True, False])

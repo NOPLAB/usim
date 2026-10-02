@@ -18,6 +18,38 @@ Standalone USD conversion can use the `usd` extra instead. The `usd` and
 `isaac` extras use incompatible NumPy versions and must not be combined.
 Select the desired extra again when switching environments.
 
+## Docker
+
+`docker/Dockerfile.isaac` extends NVIDIA's Isaac Sim 6.1.0 container with the
+usim source and bundled demonstration worlds. Build it from the repository
+root:
+
+```sh
+docker build -f docker/Dockerfile.isaac -t usim-isaac:6.1 .
+```
+
+NVIDIA requires `ACCEPT_EULA=Y` when the container starts; set it only after
+reviewing and accepting the license terms linked from the
+[Isaac Sim container guide](https://docs.isaacsim.omniverse.nvidia.com/6.1.0/installation/install_container.html).
+The image does not bake in EULA acceptance or opt in to telemetry. Run a
+headless simulation with the NVIDIA Container Toolkit installed and a compatible
+GPU:
+
+```sh
+docker run --rm --gpus all \
+  -e ACCEPT_EULA=Y \
+  -v "$PWD/assets:/workspace/usim/assets" \
+  usim-isaac:6.1 simulate \
+  --world /workspace/usim/worlds/corridor.usd \
+  --robot-urdf /workspace/usim/assets/mobile.urdf \
+  --headless --no-ros --max-seconds 10
+```
+
+The example assumes the USD world and URDF already exist in the mounted
+`assets/` directory. Keep the mount writable if the run writes contact reports
+or other outputs there. Isaac's container supports Python apps headlessly;
+GPU access requires the host driver and NVIDIA Container Toolkit.
+
 ## Worlds and robots
 
 ```sh
@@ -41,6 +73,19 @@ The port configures wheel velocity drives, creates an RGB/depth camera at the
 configured body offset, and publishes world-source state through the ROS bridge.
 Contact reports count obstacle onsets, excluding ground and self contact.
 The engine's scene paths remain optional `IsaacSimulator` constructor settings.
+
+Skid robots can select synchronized groups with
+`SimulationConfig(left_joints=('front_left', 'rear_left'),
+right_joints=('front_right', 'rear_right'), ...)`, or CLI
+`--left-joints front_left rear_left --right-joints front_right rear_right`.
+Groups override the corresponding singular joint options; `None` retains their
+one-joint defaults. Groups must be nonempty, unique, disjoint and equal in size.
+Each selected imported joint must exist exactly once and have a velocity drive
+and a distinct articulation index. Every joint on a side receives the same
+angular speed computed from the configured radius and separation. Joint axes
+must agree with that direction. Reports retain `wheel_velocities` and
+`peak_wheel_velocities`, ordered as the left group followed by the right group;
+the default configuration still reports two values.
 
 ```python
 from pathlib import Path

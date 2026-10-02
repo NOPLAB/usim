@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-02",
+  "sources": {
+    "turtlebot3": {
+      "repository": "https://github.com/ROBOTIS-GIT/turtlebot3",
+      "commit": "90a68bd2e3c61c12966779da89d8eeaec82730e9",
+      "archive_url": "https://codeload.github.com/ROBOTIS-GIT/turtlebot3/tar.gz/90a68bd2e3c61c12966779da89d8eeaec82730e9",
+      "sha256": "8f110df576bb5f346e04550061f82edfa67fed0cc2d19a79772315adc92606a9",
+      "archive_bytes": 8862240,
+      "archive_root": "turtlebot3-90a68bd2e3c61c12966779da89d8eeaec82730e9",
+      "license": "Apache-2.0",
+      "license_files": {"LICENSE": "f9946796a8a5bd5981565142fa42e3b0cc36aef6f80e86beaf5905b3c0fef1b5"},
+      "include": ["turtlebot3_description/"],
+      "non_endorsement": false
+    },
+    "rosbot": {
+      "repository": "https://github.com/husarion/rosbot_ros",
+      "commit": "5a42ca181fbac0b5eb1020795282785561a473f4",
+      "archive_url": "https://codeload.github.com/husarion/rosbot_ros/tar.gz/5a42ca181fbac0b5eb1020795282785561a473f4",
+      "sha256": "7a05eba3ab3628fd2196e413f0dcbaf0799a91a8812c91a88a8fc27739fc0e58",
+      "archive_bytes": 5801431,
+      "archive_root": "rosbot_ros-5a42ca181fbac0b5eb1020795282785561a473f4",
+      "license": "Apache-2.0",
+      "license_files": {"LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"},
+      "include": ["rosbot_description/"],
+      "non_endorsement": false
+    },
+    "pmb2": {
+      "repository": "https://github.com/pal-robotics/pmb2_robot",
+      "commit": "e6584136f15356b8f4944c25d70fb8689e3355af",
+      "archive_url": "https://codeload.github.com/pal-robotics/pmb2_robot/tar.gz/e6584136f15356b8f4944c25d70fb8689e3355af",
+      "sha256": "4470b4892dcc926473c1d2a14e30ccac1f3f818156c7da14e3e1647f790d1273",
+      "archive_bytes": 2977359,
+      "archive_root": "pmb2_robot-e6584136f15356b8f4944c25d70fb8689e3355af",
+      "license": "Apache-2.0",
+      "license_files": {"LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"},
+      "include": ["pmb2_description/"],
+      "non_endorsement": false
+    },
+    "orne-box": {
+      "repository": "https://github.com/open-rdc/orne-box",
+      "commit": "4d9815f1f363dbb2ea837cc51f8d96a87b6a60bb",
+      "archive_url": "https://codeload.github.com/open-rdc/orne-box/tar.gz/4d9815f1f363dbb2ea837cc51f8d96a87b6a60bb",
+      "sha256": "7193f28edd33070cd862220313374e0302f8760939bc130b5e0cf66838169e5b",
+      "archive_bytes": 3710896,
+      "archive_root": "orne-box-4d9815f1f363dbb2ea837cc51f8d96a87b6a60bb",
+      "license": "BSD-2-Clause",
+      "license_files": {"LICENSE": "b1a0b8d271eb78c4ff5cb7cc11481372409a2315d81a5849603f6fd2a7f26890"},
+      "include": ["orne_box_description/"],
+      "non_endorsement": false
+    },
+    "clearpath": {
+      "repository": "https://github.com/clearpathrobotics/clearpath_common",
+      "commit": "5c5ec97ee0245d8543aeb29115e01d3c0f38900e",
+      "archive_url": "https://codeload.github.com/clearpathrobotics/clearpath_common/tar.gz/5c5ec97ee0245d8543aeb29115e01d3c0f38900e",
+      "sha256": "40faadf4569a9f25f55c67739f13b1f0d3215d64f9486a2543833310f2cd9b84",
+      "archive_bytes": 20252477,
+      "archive_root": "clearpath_common-5c5ec97ee0245d8543aeb29115e01d3c0f38900e",
+      "license": "BSD-3-Clause",
+      "license_files": {"LICENSE": "c5b036522ecf21b207daad625d10aff273d170b5cb46e3cae89129f67a6603c7"},
+      "header_files": ["clearpath_platform_description/urdf/common.urdf.xacro"],
+      "include": [
+        "clearpath_platform_description/package.xml",
+        "clearpath_platform_description/urdf/common.urdf.xacro",
+        "clearpath_platform_description/urdf/generic/",
+        "clearpath_platform_description/urdf/a200/",
+        "clearpath_platform_description/urdf/j100/",
+        "clearpath_platform_description/meshes/a200/",
+        "clearpath_platform_description/meshes/j100/"
+      ],
+      "non_endorsement": true
+    },
+    "husarion_components_description": {
+      "repository": "https://github.com/husarion/husarion_components_description",
+      "commit": "5f783f89961bb16098184f5381b1a76058cec19e",
+      "archive_url": "https://codeload.github.com/husarion/husarion_components_description/tar.gz/5f783f89961bb16098184f5381b1a76058cec19e",
+      "sha256": "8f855cfa1df42ef0692a5787d7b39c857de5017486a9dcfb99578dee69d59492",
+      "archive_bytes": 3572783,
+      "archive_root": "husarion_components_description-5f783f89961bb16098184f5381b1a76058cec19e",
+      "license": "Apache-2.0",
+      "license_files": {"LICENSE.txt": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"},
+      "include": ["CMakeLists.txt", "package.xml", "urdf/", "meshes/", "launch/", "config/", "test/", "env-hooks/"],
+      "non_endorsement": false
+    },
+    "pal_urdf_utils": {
+      "repository": "https://github.com/pal-robotics/pal_urdf_utils",
+      "commit": "171a1fe521e42eaf2b6cff71d5339551feaa0191",
+      "archive_url": "https://codeload.github.com/pal-robotics/pal_urdf_utils/tar.gz/171a1fe521e42eaf2b6cff71d5339551feaa0191",
+      "sha256": "6edf4a155c325e365dcb64388110bf417f204d8b6c82e686e55c0653fb199193",
+      "archive_bytes": 7387273,
+      "archive_root": "pal_urdf_utils-171a1fe521e42eaf2b6cff71d5339551feaa0191",
+      "license": "Apache-2.0",
+      "license_files": {"LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"},
+      "include": ["CMakeLists.txt", "package.xml", "urdf/", "meshes/"],
+      "non_endorsement": false
+    }
+  },
+  "robots": {
+    "turtlebot3": {
+      "source": "turtlebot3",
+      "maker": "ROBOTIS",
+      "drive": "differential",
+      "base_link": "base_link",
+      "left_joints": ["wheel_left_joint"],
+      "right_joints": ["wheel_right_joint"],
+      "variants": {
+        "burger": {"description": "turtlebot3_description/urdf/turtlebot3_burger.urdf", "wheel_radius_m": 0.033, "wheel_separation_m": 0.160},
+        "waffle": {"description": "turtlebot3_description/urdf/turtlebot3_waffle.urdf", "wheel_radius_m": 0.033, "wheel_separation_m": 0.287},
+        "waffle_pi": {"description": "turtlebot3_description/urdf/turtlebot3_waffle_pi.urdf", "wheel_radius_m": 0.033, "wheel_separation_m": 0.287}
+      },
+      "xacro_args": {"namespace": ""}
+    },
+    "rosbot": {
+      "source": "rosbot",
+      "maker": "Husarion",
+      "drive": "skid",
+      "base_link": "base_link",
+      "left_joints": ["fl_wheel_joint", "rl_wheel_joint"],
+      "right_joints": ["fr_wheel_joint", "rr_wheel_joint"],
+      "variants": {
+        "2": {"description": "rosbot_description/urdf/rosbot.urdf.xacro", "wheel_radius_m": 0.0425, "wheel_separation_m": 0.192, "wheelbase_m": 0.106},
+        "xl": {"description": "rosbot_description/urdf/rosbot_xl.urdf.xacro", "wheel_radius_m": 0.048, "wheel_separation_m": 0.248, "wheelbase_m": 0.170}
+      },
+      "xacro_args": {"mecanum": "false", "namespace": "", "use_sim": "false"},
+      "dependencies": [
+        {"repository": "https://github.com/husarion/husarion_components_description", "commit": "5f783f89961bb16098184f5381b1a76058cec19e", "license": "Apache-2.0", "license_path": "LICENSE.txt", "source": "husarion_components_description", "fetched": true}
+      ]
+    },
+    "pmb2": {
+      "source": "pmb2",
+      "maker": "PAL Robotics",
+      "drive": "differential",
+      "base_link": "base_link",
+      "left_joints": ["wheel_left_joint"],
+      "right_joints": ["wheel_right_joint"],
+      "variants": {
+        "base": {"description": "pmb2_description/robots/pmb2.urdf.xacro", "wheel_radius_m": 0.0985, "wheel_separation_m": 0.4044, "wheel_width_m": 0.040}
+      },
+      "xacro_args": {"laser_model": "no-laser", "camera_model": "no-camera", "has_sonars": "false", "has_microphone": "false", "add_on_module": "no-add-on", "namespace": ""},
+      "dependencies": [
+        {"repository": "https://github.com/pal-robotics/pal_urdf_utils", "commit": "171a1fe521e42eaf2b6cff71d5339551feaa0191", "license": "Apache-2.0", "license_path": "LICENSE", "source": "pal_urdf_utils", "fetched": true}
+      ]
+    },
+    "orne-box": {
+      "source": "orne-box",
+      "maker": "Robot Design and Control Lab, Chiba Institute of Technology",
+      "drive": "differential",
+      "base_link": "base_link",
+      "left_joints": ["left_wheel_joint"],
+      "right_joints": ["right_wheel_joint"],
+      "variants": {
+        "base": {"description": "orne_box_description/urdf/orne_box.urdf.xacro", "wheel_radius_m": 0.145, "wheel_separation_m": 0.4615, "wheel_width_m": 0.045}
+      },
+      "xacro_args": {}
+    },
+    "jackal": {
+      "source": "clearpath",
+      "maker": "Clearpath Robotics",
+      "drive": "skid",
+      "base_link": "base_link",
+      "left_joints": ["front_left_wheel_joint", "rear_left_wheel_joint"],
+      "right_joints": ["front_right_wheel_joint", "rear_right_wheel_joint"],
+      "variants": {
+        "j100": {"description": "clearpath_platform_description/urdf/j100/j100.urdf.xacro", "macro": "j100", "wheel_radius_m": 0.098, "wheel_separation_m": 0.37559, "wheelbase_m": 0.262, "wheel_width_m": 0.040}
+      },
+      "xacro_args": {"namespace": "", "prefix": "", "is_sim": "false", "use_platform_controllers": "false", "gazebo_controllers": ""}
+    },
+    "husky": {
+      "source": "clearpath",
+      "maker": "Clearpath Robotics",
+      "drive": "skid",
+      "base_link": "base_link",
+      "left_joints": ["front_left_wheel_joint", "rear_left_wheel_joint"],
+      "right_joints": ["front_right_wheel_joint", "rear_right_wheel_joint"],
+      "variants": {
+        "a200": {"description": "clearpath_platform_description/urdf/a200/a200.urdf.xacro", "macro": "a200", "wheel_radius_m": 0.1651, "wheel_separation_m": 0.555, "wheelbase_m": 0.512, "wheel_width_m": 0.1143}
+      },
+      "xacro_args": {"namespace": "", "is_sim": "false", "use_platform_controllers": "false", "gazebo_controllers": ""}
+    }
+  }
+}

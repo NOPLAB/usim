@@ -18,6 +18,7 @@ uv build
 The base wheel has no runtime dependencies. Native engines and ROS are optional.
 See [Gazebo](docs/gazebo.md), [Isaac](docs/isaac.md), and
 [the shared contract](docs/architecture.md).
+For an optional downloaded world, see [Virtual Tsukuba Challenge](docs/vtc.md).
 
 ## Run a robot
 
@@ -48,10 +49,19 @@ uv run --python 3.12 --extra isaac usim simulate \
   --wheel-radius 0.09 --wheel-separation 0.36 --camera-offset 0.15 0 0.35
 ```
 
+For an Isaac Sim 6.1 container, build `docker/Dockerfile.isaac` from the
+repository root. See [Isaac Docker setup](docs/isaac.md#docker) for GPU and
+runtime license requirements.
+
 External URDFs are accepted directly. Wheel joints, geometry, camera dimensions,
 offset and ROS topics are explicit; inspect `usim simulate --help`. Authoring
 and drive dimensions must agree. The box-world converter intentionally rejects
 unsupported SDF geometry rather than dropping it.
+
+For license-audited robot sources and additional indoor/outdoor worlds, see
+[robots](docs/robots.md) and [worlds](docs/worlds.md). The
+[Raspberry Pi Cat VTC SLAM/Nav2 example](examples/vtc_navigation/README.md)
+shows how to map and navigate a fetched VTC world.
 
 ## Python library
 

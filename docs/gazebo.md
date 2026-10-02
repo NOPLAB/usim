@@ -61,7 +61,7 @@ on Linux, access to the X11 socket. GUI use on Windows was not verified.
 
 ## Assets and control
 
-Supply one SDF world and a physical URDF with the configured base and two
+Supply one SDF world and a physical URDF with the configured base and
 rotating wheel joints. The port does not invent mass, collision geometry, wheel
 axes, or friction for arbitrary robots. The generated primitive robot in the
 smoke script is one known-working example.
@@ -72,6 +72,17 @@ controller cannot bypass the motor gate; geometry and other Gazebo extensions
 are preserved. Wheel diameter is twice the configured radius, wheel separation
 and joint names are explicit, and odometry uses Gazebo world truth, the `odom`
 frame, and the configured base frame.
+
+For skid steering, set `left_joints=('front_left', 'rear_left')` and
+`right_joints=('front_right', 'rear_right')` in `SimulationConfig`, or pass
+`--left-joints front_left rear_left --right-joints front_right rear_right` to
+`usim simulate --backend gazebo`. Groups override the corresponding singular
+`left_joint`/`right_joint` fields and CLI flags; omitting them keeps the original
+one-wheel-per-side behavior. Each group must be nonempty, contain unique nonblank
+names, be disjoint from the other side, and have the same number of joints.
+The port emits `num_wheel_pairs` and repeated left/right joints, diameter and
+separation for each pair. All wheels use the configured radius and separation.
+Source joint axes must give the same forward rotation direction on each side.
 
 The public command topic goes only to a native `CommandGate`. The diff-drive
 plugin receives a unique private topic, never public `/cmd_vel`. Motors start
@@ -90,7 +101,9 @@ resource trees retain sibling texture directories. `package://` references
 resolve from an enclosing matching `package.xml`, `AMENT_PREFIX_PATH`, or
 `ROS_PACKAGE_PATH`; unresolved packages fail before Docker is launched.
 `model://` world includes remain Gazebo-native and must exist in the image or
-next to the supplied world. Automatic online model downloads are disabled.
+in a local `models/` directory adjacent to the world's parent directory;
+these model roots are mounted and added to `GAZEBO_MODEL_PATH`. Automatic
+online model downloads are disabled.
 Absolute mesh files preserve their containing directory; additional dependencies
 outside that directory should use a package or relative resource tree.
 

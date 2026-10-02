@@ -127,7 +127,8 @@ def _run(
         from pxr import Usd, UsdGeom, UsdPhysics
 
         robot_assets = tempfile.TemporaryDirectory(prefix='urdf-', dir=asset_directory)
-        wheel_joints = f'^({re.escape(args.left_joint)}|{re.escape(args.right_joint)})$'
+        wheel_names = args.left_wheel_joints + args.right_wheel_joints
+        wheel_joints = '^(' + '|'.join(re.escape(name) for name in wheel_names) + ')$'
         import_config = URDFImporterConfig(
             urdf_path=str(args.robot_urdf.resolve()),
             usd_path=robot_assets.name,
@@ -173,7 +174,7 @@ def _run(
             raise RuntimeError(
                 f'expected one robot articulation root, got {len(articulation_roots)}'
             )
-        for name in (args.left_joint, args.right_joint):
+        for name in wheel_names:
             joints = [
                 prim
                 for prim in stage.Traverse()
@@ -249,9 +250,12 @@ def _run(
             camera_prim = camera.authoring_object
             app_utils.play(commit=True)
             rep.orchestrator.step(rt_subframes=2, pause_timeline=False)
-        left = robot.get_dof_index(args.left_joint)
-        right = robot.get_dof_index(args.right_joint)
-        if left == right or min(left, right) < 0:
+        left = [robot.get_dof_index(name) for name in args.left_wheel_joints]
+        right = [robot.get_dof_index(name) for name in args.right_wheel_joints]
+        wheel_indices = left + right
+        if any(index is None or index < 0 for index in wheel_indices) or len(
+            set(wheel_indices)
+        ) != len(wheel_indices):
             raise RuntimeError('wheel joints missing from imported URDF')
 
         if args.ros is not None:
@@ -270,7 +274,7 @@ def _run(
         camera_frames = 0
         empty_camera_frames = 0
         driven_steps = 0
-        peak_joint_velocity = [0.0, 0.0]
+        peak_joint_velocity = [0.0] * len(wheel_indices)
         position, orientation = robot.get_world_pose()
         while (
             (stop is None or not stop.is_set())
@@ -286,7 +290,10 @@ def _run(
             velocity = wheel_velocities(*command, args.wheel_radius, args.wheel_separation)
             robot.apply_action(
                 ArticulationAction(
-                    joint_velocities=np.asarray(velocity), joint_indices=np.asarray([left, right])
+                    joint_velocities=np.asarray(
+                        [velocity[0]] * len(left) + [velocity[1]] * len(right)
+                    ),
+                    joint_indices=np.asarray(wheel_indices),
                 )
             )
             previous_position, previous_orientation = robot.get_world_pose()
@@ -325,7 +332,7 @@ def _run(
             capture = camera is not None and time.monotonic() - last_camera >= 1 / args.camera_hz
             world.step(render=capture)
             if command != (0.0, 0.0):
-                joint_velocity = robot.get_joint_velocities()[[left, right]]
+                joint_velocity = robot.get_joint_velocities()[wheel_indices]
                 peak_joint_velocity = [
                     max(old, abs(float(new)))
                     for old, new in zip(peak_joint_velocity, joint_velocity)
@@ -412,7 +419,7 @@ def _run(
                     'driven_steps': driven_steps,
                     'final_position': [float(v) for v in position],
                     'wheel_velocities': [
-                        float(v) for v in robot.get_joint_velocities()[[left, right]]
+                        float(v) for v in robot.get_joint_velocities()[wheel_indices]
                     ],
                     'peak_wheel_velocities': peak_joint_velocity,
                     'collisions': contact_payload['collisions']

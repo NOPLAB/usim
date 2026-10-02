@@ -64,6 +64,8 @@ class SimulationConfig:
     headless: bool = False
     max_seconds: float = 0.0
     ros: Ros2Config | None = field(default_factory=Ros2Config)
+    left_joints: tuple[str, ...] | None = None
+    right_joints: tuple[str, ...] | None = None
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -85,6 +87,32 @@ class SimulationConfig:
             raise ConfigurationError('robot and frame names')
         if self.left_joint == self.right_joint:
             raise ConfigurationError('wheel joints must differ')
+        for name, group in (
+            ('left_joints', self.left_joints),
+            ('right_joints', self.right_joints),
+        ):
+            if group is not None:
+                if not isinstance(group, (tuple, list)) or not group:
+                    raise ConfigurationError(name)
+                if any(not isinstance(joint, str) or not joint.strip() for joint in group):
+                    raise ConfigurationError(name)
+                if len(set(group)) != len(group):
+                    raise ConfigurationError(name)
+                object.__setattr__(self, name, tuple(group))
+        if set(self.left_wheel_joints) & set(self.right_wheel_joints):
+            raise ConfigurationError('wheel groups must be disjoint')
+        if len(self.left_wheel_joints) != len(self.right_wheel_joints):
+            raise ConfigurationError('wheel groups must have equal pair counts')
+
+    @property
+    def left_wheel_joints(self) -> tuple[str, ...]:
+        """Selected left-side drives; an omitted group retains the singular API."""
+        return self.left_joints if self.left_joints is not None else (self.left_joint,)
+
+    @property
+    def right_wheel_joints(self) -> tuple[str, ...]:
+        """Selected right-side drives; an omitted group retains the singular API."""
+        return self.right_joints if self.right_joints is not None else (self.right_joint,)
 
 
 @dataclass(frozen=True, slots=True)

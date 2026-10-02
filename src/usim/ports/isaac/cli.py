@@ -68,6 +68,18 @@ def add_arguments(parser, *, defaults: dict | None = None) -> None:
     parser.add_argument('--wheel-separation', type=float, default=defaults['wheel_separation'])
     parser.add_argument('--left-joint', default=defaults['left_joint'])
     parser.add_argument('--right-joint', default=defaults['right_joint'])
+    parser.add_argument(
+        '--left-joints',
+        nargs='+',
+        default=defaults['left_joints'],
+        help='left-side wheel group (overrides --left-joint)',
+    )
+    parser.add_argument(
+        '--right-joints',
+        nargs='+',
+        default=defaults['right_joints'],
+        help='right-side wheel group (overrides --right-joint)',
+    )
     parser.add_argument('--base-link', default=defaults['base_link'])
     parser.add_argument(
         '--camera-offset',

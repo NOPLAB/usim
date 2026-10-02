@@ -11,6 +11,7 @@ import pytest
 
 from usim import SimulationConfig
 from usim.ports.isaac import IsaacSimulator
+from usim.ports.isaac.runner import main
 
 
 class Process:
@@ -123,3 +124,38 @@ def test_precancel_does_not_start_sdk(tmp_path):
             SimulationConfig(tmp_path / 'missing', tmp_path / 'missing2'), stop=stop
         )
     launch.assert_not_called()
+
+
+def test_worker_deserializes_wheel_groups_as_tuples(tmp_path):
+    from dataclasses import asdict
+
+    config = SimulationConfig(
+        tmp_path / 'world.usd',
+        tmp_path / 'robot.urdf',
+        left_joints=('lf', 'lr'),
+        right_joints=('rf', 'rr'),
+        ros=None,
+    )
+    fields = asdict(config)
+    fields.update(world=str(config.world), robot_urdf=str(config.robot_urdf))
+    path = tmp_path / 'configuration.json'
+    path.write_text(
+        json.dumps(
+            {
+                'configuration': fields,
+                'port': {'contact_out': None},
+                'stop_file': str(tmp_path / 'stop'),
+                'asset_directory': str(tmp_path),
+            }
+        )
+    )
+    with (
+        patch('sys.argv', ['worker', str(path)]),
+        patch('usim.ports.isaac.runner.threading.Thread'),
+        patch('usim.ports.isaac.sim._run') as execute,
+    ):
+        main()
+    restored = execute.call_args.args[0]
+    assert restored == config
+    assert isinstance(restored.left_joints, tuple)
+    assert isinstance(restored.right_joints, tuple)

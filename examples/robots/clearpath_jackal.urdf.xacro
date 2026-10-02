@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!--
+  usim wrapper around the pinned Clearpath Jackal J100 xacro macro.
+  Upstream source and its BSD-3-Clause notices are fetched separately.
+-->
+<robot name="jackal" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find clearpath_platform_description)/urdf/common.urdf.xacro"/>
+  <xacro:include filename="$(find clearpath_platform_description)/urdf/j100/j100.urdf.xacro"/>
+  <xacro:j100/>
+</robot>
