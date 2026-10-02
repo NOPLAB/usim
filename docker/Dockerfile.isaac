@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /workspace/usim
 COPY src/usim /workspace/usim/src/usim
-COPY worlds /workspace/usim/worlds
+COPY examples/worlds /workspace/usim/worlds
 
 ENTRYPOINT ["/bin/bash", "-lc", "if [[ \"${ACCEPT_EULA:-}\" != \"Y\" ]]; then echo 'Set ACCEPT_EULA=Y only after accepting NVIDIA Isaac Sim terms.' >&2; exit 2; fi; exec /isaac-sim/python.sh -m usim.cli \"$@\"", "usim"]
 CMD ["--help"]

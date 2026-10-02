@@ -14,7 +14,7 @@ class WorldTest(unittest.TestCase):
         expected = {'corridor': 3, 'junction': 3, 'weave': 3}
         for scene, count in expected.items():
             with self.subTest(scene=scene):
-                boxes = parse_boxes(ROOT / 'worlds' / f'{scene}.world')
+                boxes = parse_boxes(ROOT / 'examples' / 'worlds' / f'{scene}.world')
                 self.assertEqual(len(boxes), count)
                 self.assertTrue(all(len(item['pose']) == 6 for item in boxes))
 

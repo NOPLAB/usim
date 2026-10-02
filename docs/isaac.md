@@ -54,7 +54,7 @@ GPU access requires the host driver and NVIDIA Container Toolkit.
 
 ```sh
 uv run --python 3.12 --extra isaac usim convert-world \
-  --world worlds/corridor.world --out assets/corridor.usd
+  --world examples/worlds/corridor.world --out assets/corridor.usd
 uv run usim create-robot --out assets/mobile.urdf
 uv run --python 3.12 --extra isaac usim simulate \
   --world assets/corridor.usd --robot-urdf assets/mobile.urdf \

@@ -35,7 +35,7 @@ Gazebo uses an SDF world and an isolated native Humble runtime:
 ```sh
 docker build -f docker/Dockerfile.gazebo -t usim-gazebo:local .
 uv run usim simulate --backend gazebo --headless \
-  --world worlds/corridor.world --robot-urdf assets/mobile.urdf \
+  --world examples/worlds/corridor.world --robot-urdf assets/mobile.urdf \
   --wheel-radius 0.09 --wheel-separation 0.36 --camera-offset 0.15 0 0.35
 ```
 
@@ -43,7 +43,7 @@ Isaac uses collidable, metre-scale Z-up USD:
 
 ```sh
 uv run --python 3.12 --extra isaac usim convert-world \
-  --world worlds/corridor.world --out assets/corridor.usd
+  --world examples/worlds/corridor.world --out assets/corridor.usd
 uv run --python 3.12 --extra isaac usim simulate \
   --world assets/corridor.usd --robot-urdf assets/mobile.urdf \
   --wheel-radius 0.09 --wheel-separation 0.36 --camera-offset 0.15 0 0.35
@@ -72,7 +72,7 @@ from usim.ports.gazebo import GazeboSimulator
 
 GazeboSimulator().run(
     SimulationConfig(
-        world=Path('worlds/corridor.world'),
+        world=Path('examples/worlds/corridor.world'),
         robot_urdf=Path('assets/mobile.urdf'),
         headless=True,
         max_seconds=30,
@@ -97,7 +97,7 @@ application ROS interfaces.
 - `src/usim/`: pure contracts and robot authoring.
 - `src/usim/bridges/`: optional standard ROS I/O.
 - `src/usim/ports/`: native engine execution.
-- `worlds/`: small owned SDF demonstration worlds.
+- `examples/worlds/`: small owned SDF demonstration worlds.
 - `test/` and `scripts/`: regressions and real control/sensor smokes.
 
 ```sh

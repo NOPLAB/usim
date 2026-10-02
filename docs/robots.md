@@ -202,7 +202,7 @@ from usim.ports.gazebo import GazeboSimulator
 
 GazeboSimulator(image='usim-gazebo:local').run(
     SimulationConfig(
-        world=Path('worlds/corridor.world'),
+        world=Path('examples/worlds/corridor.world'),
         robot_urdf=Path('assets/robots/prepared/burger.urdf'),
         base_link='base_link',
         left_joint='wheel_left_joint',

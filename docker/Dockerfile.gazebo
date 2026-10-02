@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Checkout resources, not the Python 3.12 usim wheel (Humble uses 3.10).
-COPY worlds /opt/usim/worlds
+COPY examples/worlds /opt/usim/worlds
 ENV USIM_ROOT=/opt/usim
 RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
 WORKDIR /workspace
