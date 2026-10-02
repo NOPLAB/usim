@@ -17,12 +17,13 @@ def executable(name: str, bin_dir: Path | None) -> str:
     if bin_dir is None:
         found = shutil.which(name)
         if found:
-            return str(Path(found).resolve())
+            return str(Path(found).absolute())
     else:
         for suffix in ('.exe', '') if os.name == 'nt' else ('',):
             candidate = bin_dir / (name + suffix)
             if candidate.is_file():
-                return str(candidate.resolve())
+                # A venv's python is a symlink; resolving it would escape the environment.
+                return str(candidate.absolute())
     raise FileNotFoundError(f'installed executable not found: {name}')
 
 
