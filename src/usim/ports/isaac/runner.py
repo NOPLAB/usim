@@ -116,10 +116,11 @@ def run(
                 if cancelled_at is not None and now - cancelled_at > 30:
                     raise TimeoutError('Isaac cancellation exceeded 30 seconds')
             reader.join(timeout=5)
-            if reader.is_alive():
-                raise RuntimeError('Isaac output reader failed to stop')
+            # Report the worker's own failure before a stuck reader can mask it.
             if status or not result or result[-1]['status'] not in ('finished', 'stopped'):
                 raise RuntimeError(f'Isaac worker failed: exit={status}, result={result}')
+            if reader.is_alive():
+                raise RuntimeError('Isaac output reader failed to stop')
         finally:
             if process.poll() is None:
                 process.kill()

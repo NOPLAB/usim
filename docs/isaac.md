@@ -100,6 +100,8 @@ On Linux, add the SDK's
 starting Python. Windows retains an explicit DLL-directory handle.
 
 `--no-ros` omits application ROS imports; `--physics-only` omits the camera.
+Only steps whose camera frame is read (at `camera_hz`) are rendered; reading after
+unread rendered frames hit recycled buffers (CUDA error 700) in Isaac 6.1.
 `--headless` requests native headless mode. Kit rendering is platform-dependent;
 if its renderer fails to advance, use a visible window or Xvfb on Linux.
 

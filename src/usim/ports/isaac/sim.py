@@ -12,6 +12,7 @@ import re
 import sys
 import tempfile
 import time
+import traceback
 from pathlib import Path
 
 from threading import Event
@@ -319,7 +320,10 @@ def _run(
                     ),
                     orientations=np.asarray([camera_orientation]),
                 )
-            world.step(render=camera is not None)
+            # Render only steps whose frame is read: buffers of unread rendered frames are
+            # recycled, and a later read faults with CUDA error 700.
+            capture = camera is not None and time.monotonic() - last_camera >= 1 / args.camera_hz
+            world.step(render=capture)
             if command != (0.0, 0.0):
                 joint_velocity = robot.get_joint_velocities()[[left, right]]
                 peak_joint_velocity = [
@@ -349,7 +353,7 @@ def _run(
                 )
                 stamp = bridge.publish_state(state)
             now = time.monotonic()
-            if camera is not None and now - last_camera >= 1 / args.camera_hz:
+            if camera is not None and capture:
                 color, _ = camera.get_data('rgb')
                 if color is None:
                     rep.orchestrator.step(rt_subframes=2, pause_timeline=False)
@@ -421,6 +425,8 @@ def _run(
         if status == 'incomplete':
             raise RuntimeError('Isaac exited before producing camera frames')
     except Exception as error:
+        # Kit may exit during close() before Python reports the re-raised traceback.
+        traceback.print_exc()
         print(
             json.dumps({'status': 'error', 'error': f'{type(error).__name__}: {error}'}),
             flush=True,
