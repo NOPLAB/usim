@@ -26,8 +26,8 @@ jobs:
           uv run --group dev --frozen ruff format --check .
       - name: Run generic simulator tests
         run: uv run --group dev --frozen pytest -ra
-      - name: Build distribution
-        run: uv build
+      - name: Build independent distributions
+        run: uv build --all-packages
       - name: Exercise installed wheel
         run: |
           uv venv --python '${{ matrix.python }}' /tmp/usim-wheel-qa

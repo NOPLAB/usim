@@ -18,7 +18,7 @@ from pathlib import Path
 from threading import Event
 
 from usim.simulation import RobotState, SimulationConfig, Velocity, wheel_velocities
-from usim.ports.isaac.contacts import ObstacleContactLog
+from usim_isaacsim.contacts import ObstacleContactLog
 
 
 def _load_ros_python() -> None:
@@ -66,7 +66,7 @@ class IsaacSimulator:
         for path in (configuration.world, configuration.robot_urdf):
             if not path.is_file():
                 raise ValueError(f'missing asset: {path}')
-        from usim.ports.isaac.runner import run
+        from usim_isaacsim.runner import run
 
         run(configuration, self, stop=stop)
 

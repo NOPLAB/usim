@@ -3,6 +3,8 @@
 ARG ISAAC_SIM_IMAGE=nvcr.io/nvidia/isaac-sim:6.1.0
 FROM ${ISAAC_SIM_IMAGE}
 
+COPY --from=ghcr.io/astral-sh/uv:0.12.7 /uv /usr/local/bin/uv
+
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/workspace/usim/src \
@@ -10,7 +12,12 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /workspace/usim
 COPY src/usim /workspace/usim/src/usim
+COPY pyproject.toml LICENSE /workspace/usim/
+COPY packages /workspace/usim/packages
 COPY examples/worlds /workspace/usim/worlds
+
+RUN uv pip install --system --python /isaac-sim/python.sh --no-deps \
+    /workspace/usim /workspace/usim/packages/isaacsim
 
 ENTRYPOINT ["/bin/bash", "-lc", "if [[ \"${ACCEPT_EULA:-}\" != \"Y\" ]]; then echo 'Set ACCEPT_EULA=Y only after accepting NVIDIA Isaac Sim terms.' >&2; exit 2; fi; exec /isaac-sim/python.sh -m usim.cli \"$@\"", "usim"]
 CMD ["--help"]

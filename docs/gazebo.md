@@ -55,6 +55,57 @@ and then a bounded forced kill; the host always removes its container and
 staging directory. `ros=None` omits the drive and camera ROS plugins and public
 motor interface while still running physics and any requested camera sensor.
 
+### Container engine
+
+`GazeboSimulator(image, *, engine='docker')` drives the `docker` CLI by default.
+Pass `engine='podman'` to issue the same `create`, `start --attach`, `stop`,
+`ps` and `rm --force` calls through `podman`; the parameter is typed as
+`Literal['docker', 'podman']`. The image must be built or pulled with the selected engine. Podman runs use the
+same host networking, read-only bind mounts and `--init`; hosts that enforce
+SELinux labels on bind mounts were not verified.
+
+### ROS transport configuration
+
+The adapter forwards explicitly set `ROS_DOMAIN_ID`, `ROS_LOCALHOST_ONLY`,
+`RMW_IMPLEMENTATION`, and `FASTDDS_BUILTIN_TRANSPORTS` to native ROS.
+`network=` selects the container network; an application can put its stack and
+the simulator on the same owned bridge without changing the simulator core.
+
+For Fast DDS, pass `fastdds_profile=Path('udp_only.xml')` to `GazeboSimulator`.
+The caller's XML is copied unchanged into the private read-only staging mount
+and selected through `FASTRTPS_DEFAULT_PROFILES_FILE` inside the container.
+This works with Humble versions that do not recognize
+`FASTDDS_BUILTIN_TRANSPORTS`. Profile contents and paths to additional resources
+inside that XML are the caller's native container configuration. An unreadable
+profile fails before an engine call. Omitting it leaves the middleware defaults
+unchanged; the public core gains no ROS or middleware dependency.
+
+### Lidar
+
+```python
+from usim.ports.gazebo import GazeboLidarConfig, GazeboSimulator
+
+simulator = GazeboSimulator(
+    'usim-gazebo:local',
+    engine='podman',
+    lidar=GazeboLidarConfig(link_name='laser_link', frame_name='laser_link', topic='/scan'),
+)
+```
+
+`GazeboLidarConfig(link_name, frame_name, topic, update_rate=10.0,
+horizontal_samples=720, min_angle=-pi, max_angle=pi, range_min=0.1,
+range_max=10.0)` adds a physical planar Gazebo `ray` sensor named `usim_lidar`
+to the temporary URDF after source plugins are stripped. The sensor is attached
+to `link_name`, which must exist in the URDF; place a dedicated link to control
+its mounting pose. With ROS enabled, a `libgazebo_ros_ray_sensor.so` plugin
+publishes `sensor_msgs/LaserScan` on the absolute `topic` with header frame
+`frame_name`. `ros=None` keeps the ray sensor but omits the ROS plugin. The
+lidar is independent of `camera_enabled`. Construction raises `ConfigurationError` for blank names,
+relative or whitespace topics, non-finite values, a nonpositive rate, fewer than
+one sample, `max_angle <= min_angle`, a span above 2*pi, a nonpositive
+`range_min`, and `range_max <= range_min`. Range resolution is 0.01 m; no noise
+model is added. Caller URDF and world files are never modified.
+
 Headless cameras use an actual Xvfb display and software OpenGL; the port never
 silently turns off cameras. Non-headless use requires a reachable `DISPLAY` and,
 on Linux, access to the X11 socket. GUI use on Windows was not verified.
@@ -107,8 +158,12 @@ online model downloads are disabled.
 Absolute mesh files preserve their containing directory; additional dependencies
 outside that directory should use a package or relative resource tree.
 
-Docker uses host networking for ROS. External clients need compatible DDS
+The container uses host networking for ROS. External clients need compatible DDS
 networking and `ROS_DOMAIN_ID`; Docker Desktop host networking may need enabling.
+When set on the host, `ROS_DOMAIN_ID`, `RMW_IMPLEMENTATION` and
+`FASTDDS_BUILTIN_TRANSPORTS` (for example `UDPv4` to avoid shared-memory
+transport across the container boundary) are forwarded into the container. The
+last one takes effect only if the image's Fast DDS release honors it.
 The smoke probe runs inside the same container, avoiding both host DDS and Python
 ABI assumptions. Run one Gazebo session at a time per network namespace: the
 native Gazebo master and default ROS topics are shared.

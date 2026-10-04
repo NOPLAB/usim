@@ -194,7 +194,7 @@ def run(
                             [
                                 sys.executable,
                                 '-m',
-                                'usim.ports.gazebo.smoke',
+                                'usim_gazebo.smoke',
                                 str(config_path),
                                 str(smoke_output),
                             ]

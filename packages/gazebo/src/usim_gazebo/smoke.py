@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 
 from usim.bridges.smoke import probe
-from usim.ports.gazebo.runner import load_configuration
+from usim_gazebo.runner import load_configuration
 
 
 if __name__ == '__main__':

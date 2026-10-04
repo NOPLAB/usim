@@ -33,7 +33,7 @@ sys.meta_path.insert(0, Guard())
 class LibraryPortTest(unittest.TestCase):
     def test_typed_configuration_and_standalone_dispatch(self):
         from usim.ports.isaac import IsaacSimulator, SimulationConfig, simulate
-        from usim.ports.isaac.contacts import ObstacleContactLog
+        from usim_isaacsim.contacts import ObstacleContactLog
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -43,7 +43,7 @@ class LibraryPortTest(unittest.TestCase):
             configuration = SimulationConfig(
                 world=world, robot_urdf=robot, ros=None, camera_enabled=False
             )
-            with patch('usim.ports.isaac.runner.run') as execute:
+            with patch('usim_isaacsim.runner.run') as execute:
                 simulate(configuration)
                 self.assertIs(execute.call_args.args[0], configuration)
                 self.assertIsNone(execute.call_args.kwargs['stop'])

@@ -11,7 +11,7 @@ import pytest
 
 from usim import SimulationConfig
 from usim.ports.isaac import IsaacSimulator
-from usim.ports.isaac.runner import main
+from usim_isaacsim.runner import main
 
 
 class Process:
@@ -48,7 +48,7 @@ def test_worker_result_required_and_owned_files_removed(tmp_path, output, passes
         assert kwargs['stdin'] is subprocess.DEVNULL
         return process
 
-    with patch('usim.ports.isaac.runner.subprocess.Popen', side_effect=launch):
+    with patch('usim_isaacsim.runner.subprocess.Popen', side_effect=launch):
         if passes:
             IsaacSimulator().run(SimulationConfig(world, robot))
         else:
@@ -107,8 +107,8 @@ def test_shutdown_timeout_kills_worker_and_removes_assets(tmp_path):
         return process
 
     with (
-        patch('usim.ports.isaac.runner.subprocess.Popen', side_effect=launch),
-        patch('usim.ports.isaac.runner.time.monotonic', side_effect=lambda: clock[0]),
+        patch('usim_isaacsim.runner.subprocess.Popen', side_effect=launch),
+        patch('usim_isaacsim.runner.time.monotonic', side_effect=lambda: clock[0]),
         pytest.raises(TimeoutError, match='shutdown exceeded'),
     ):
         IsaacSimulator().run(SimulationConfig(world, robot))
@@ -119,7 +119,7 @@ def test_shutdown_timeout_kills_worker_and_removes_assets(tmp_path):
 def test_precancel_does_not_start_sdk(tmp_path):
     stop = threading.Event()
     stop.set()
-    with patch('usim.ports.isaac.runner.subprocess.Popen') as launch:
+    with patch('usim_isaacsim.runner.subprocess.Popen') as launch:
         IsaacSimulator().run(
             SimulationConfig(tmp_path / 'missing', tmp_path / 'missing2'), stop=stop
         )
@@ -151,8 +151,8 @@ def test_worker_deserializes_wheel_groups_as_tuples(tmp_path):
     )
     with (
         patch('sys.argv', ['worker', str(path)]),
-        patch('usim.ports.isaac.runner.threading.Thread'),
-        patch('usim.ports.isaac.sim._run') as execute,
+        patch('usim_isaacsim.runner.threading.Thread'),
+        patch('usim_isaacsim.sim._run') as execute,
     ):
         main()
     restored = execute.call_args.args[0]

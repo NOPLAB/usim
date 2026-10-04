@@ -4,11 +4,52 @@ from __future__ import annotations
 
 import os
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import Protocol
 from urllib.parse import unquote
 from urllib.request import url2pathname
 
-from usim.simulation import SimulationConfig
+from usim.simulation import ConfigurationError, SimulationConfig
+
+
+class LidarAssetConfig(Protocol):
+    """Lidar fields consumed while writing a Gazebo sensor asset."""
+
+    @property
+    def link_name(self) -> str: ...
+
+    @property
+    def frame_name(self) -> str: ...
+
+    @property
+    def topic(self) -> str: ...
+
+    @property
+    def update_rate(self) -> float: ...
+
+    @property
+    def horizontal_samples(self) -> int: ...
+
+    @property
+    def min_angle(self) -> float: ...
+
+    @property
+    def max_angle(self) -> float: ...
+
+    @property
+    def range_min(self) -> float: ...
+
+    @property
+    def range_max(self) -> float: ...
+
+
+@dataclass(frozen=True, slots=True)
+class GazeboAssetConfig:
+    """Private drive topic and optional lidar used while staging Gazebo assets."""
+
+    private_topic: str
+    lidar: LidarAssetConfig | None = None
 
 
 def _parse(path: Path, root: str) -> ET.Element:
@@ -53,16 +94,21 @@ def _package_path(uri: str, source: Path) -> tuple[Path, Path]:
 
 
 def prepare_assets(
-    configuration: SimulationConfig, directory: Path, private_topic: str
+    configuration: SimulationConfig,
+    directory: Path,
+    asset_config: GazeboAssetConfig,
 ) -> list[tuple[Path, str]]:
     """Write temporary URDF/SDF and return explicit read-only resource mounts.
 
-    Supplied robot plugins are removed so only the gated controller can drive.
+    Supplied robot plugins are removed so only the gated controller can drive;
+    an optional lidar is injected afterwards on its configured link.
     Geometry, inertia, friction and other extensions survive. Mesh folders stay
     intact, including adjacent texture resources.
     """
     world_path = configuration.world.resolve()
     robot_path = configuration.robot_urdf.resolve()
+    private_topic = asset_config.private_topic
+    lidar = asset_config.lidar
     world = _parse(world_path, 'sdf')
     if len(world.findall('world')) != 1:
         raise ValueError(f'{world_path}: expected exactly one SDF world')
@@ -71,6 +117,8 @@ def prepare_assets(
     joints = {joint.get('name'): joint for joint in robot.findall('joint')}
     if configuration.base_link not in links:
         raise ValueError(f'base link not found: {configuration.base_link}')
+    if lidar is not None and lidar.link_name not in links:
+        raise ConfigurationError('lidar.link_name')
     for name in configuration.left_wheel_joints + configuration.right_wheel_joints:
         joint = joints.get(name)
         if (
@@ -190,11 +238,40 @@ def prepare_assets(
 
     if configuration.camera_enabled:
         _camera(robot, configuration)
+    if lidar is not None:
+        _lidar(robot, lidar, ros_enabled=ros is not None)
     directory.mkdir(parents=True, exist_ok=True)
     for root, filename in ((world, 'world.sdf'), (robot, 'robot.urdf')):
         ET.indent(root, space='  ')
         ET.ElementTree(root).write(directory / filename, encoding='utf-8', xml_declaration=False)
     return list(mounts.items())
+
+
+def _lidar(robot: ET.Element, lidar: LidarAssetConfig, *, ros_enabled: bool) -> None:
+    gazebo = ET.SubElement(robot, 'gazebo', reference=lidar.link_name)
+    sensor = ET.SubElement(gazebo, 'sensor', name='usim_lidar', type='ray')
+    ET.SubElement(sensor, 'always_on').text = 'true'
+    ET.SubElement(sensor, 'visualize').text = 'false'
+    ET.SubElement(sensor, 'update_rate').text = str(lidar.update_rate)
+    ray = ET.SubElement(sensor, 'ray')
+    horizontal = ET.SubElement(ET.SubElement(ray, 'scan'), 'horizontal')
+    ET.SubElement(horizontal, 'samples').text = str(lidar.horizontal_samples)
+    ET.SubElement(horizontal, 'resolution').text = '1'
+    ET.SubElement(horizontal, 'min_angle').text = str(lidar.min_angle)
+    ET.SubElement(horizontal, 'max_angle').text = str(lidar.max_angle)
+    range_element = ET.SubElement(ray, 'range')
+    ET.SubElement(range_element, 'min').text = str(lidar.range_min)
+    ET.SubElement(range_element, 'max').text = str(lidar.range_max)
+    ET.SubElement(range_element, 'resolution').text = '0.01'
+    if ros_enabled:
+        plugin = ET.SubElement(
+            sensor, 'plugin', name='usim_lidar_ros', filename='libgazebo_ros_ray_sensor.so'
+        )
+        ros_element = ET.SubElement(plugin, 'ros')
+        ET.SubElement(ros_element, 'namespace').text = '/'
+        ET.SubElement(ros_element, 'remapping').text = f'~/out:={lidar.topic}'
+        ET.SubElement(plugin, 'output_type').text = 'sensor_msgs/LaserScan'
+        ET.SubElement(plugin, 'frame_name').text = lidar.frame_name
 
 
 def _camera(robot: ET.Element, configuration: SimulationConfig) -> None:

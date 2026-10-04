@@ -1,0 +1,471 @@
+{
+  "source_repository": "crane_x7_vla",
+  "destination_repository": "usim",
+  "hash_algorithm": "SHA256",
+  "source_root": "vla/src",
+  "destination_root": "src",
+  "files": [
+    {
+      "original_sha256": "1f3e0f780b840ed16135d22c65e4a5e5137142fe981021cbd0d7bde23b94156c",
+      "destination_relative_path": "src/usim/factory.py",
+      "binary": false,
+      "destination_sha256": "ae780f2c9faf5b4ba75a85d6bbed53ed57294ce9d1ae6e81b91d27c6bc9dc54c",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "de1bf7737c063d01c076473f72064843577856e225603f8f59a65fa87db532b9",
+      "destination_relative_path": "src/usim/interface.py",
+      "binary": false,
+      "destination_sha256": "c65dcfb8a2a922c806cfa85c7b8c21bad384ae5f795280d17cf483a03e8c7a36",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "4fd2d4e02d25263a63af7a6cfd03bd9a61a6b819e9e86b63c381970966047d9c",
+      "destination_relative_path": "src/usim/types.py",
+      "binary": false,
+      "destination_sha256": "b8c113dfbb7167871c8784eeba3d1cbd63c4dd8a579daa6cbfcf9a00dfee777a",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "2f0b4279f4af84079ef9648b1636dedf65f5a4327486b427e67be99c6022b699",
+      "destination_relative_path": "src/usim/__init__.py",
+      "binary": false,
+      "destination_sha256": "139024bf07de5603ae9a6d76f025482f06c9f08bfb3bae1f565fc9bf5b25ff24",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "053730f58d73302227b08e49ce4657693b0f5904df18e436dbd7b0c1823b2c52",
+      "destination_relative_path": "packages/genesis/src/usim_genesis/adapter.py",
+      "binary": false,
+      "destination_sha256": "3c5533d40b1d4e93c034ed76b0ed584ee37947a876c8379fd7312353eec4a2df",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "5fefefb07e9312805b44f0be7485a9307297dffa8bfe831aad868e6983a61775",
+      "destination_relative_path": "packages/genesis/src/usim_genesis/environments/base.py",
+      "binary": false,
+      "destination_sha256": "6747babd0421f38cf4c7a5ab9ef44496866f8dff889f70f25fda8d5b4702f5fa",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "95edf8f3d9a6cbc4bc24633270f770f0ef12d67e8c6527491d1226ebf3c43419",
+      "destination_relative_path": "packages/genesis/src/usim_genesis/environments/pick_place.py",
+      "binary": false,
+      "destination_sha256": "d080cfb10a1ad09d1f0c8584766d6d823057acd8dff8153e26703a5226a7b3c3",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "91795bd91ad980d8084234a67f4d285dd7a01042f3d4d745b4af36c02a1620ef",
+      "destination_relative_path": "packages/genesis/src/usim_genesis/environments/__init__.py",
+      "binary": false,
+      "destination_sha256": "f6984107bebf2cc2499203ac037383f2c8058749bde44b2b8cd5b6e3778e756b",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "a4705334c371597556eb65220b71bd071b6ef44e4234ae2a461a73adf6b65444",
+      "destination_relative_path": "packages/genesis/src/usim_genesis/__init__.py",
+      "binary": false,
+      "destination_sha256": "cbdb2fb0323b55c6fbdccb658681875a90d2b80f1d65183111764eeb63216124",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "808bc69620d319548082fb917d752f0f19093ec919c9bb95c8db28c94e426cb6",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/adapter.py",
+      "binary": false,
+      "destination_sha256": "281e9d3c56d89460d8252307f66eff46c01b97894cd2ca47f236265d34414d01",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "380656df4eda54faa36b67665bf6c1dd32d52980659b6a2e553b98fff7d3ab14",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/agent.py",
+      "binary": false,
+      "destination_sha256": "944d4bae18bd0a47c0bebc8c188b9ce8afa3c957b1bb8bac658f1d1828b44532",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "de578bd626b9625482499f207852e373b50dae38aad7845fcdf13ecbe4fa926c",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/environments/pick_place.py",
+      "binary": false,
+      "destination_sha256": "8107194509a9c1e5e9f98c626e8f8ce77851cd7377b9a77c37718f8e58931fb4",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "e60618f2a4b348b2ef1f749c0c38085b5a77c7f27afde93881149387db708fee",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/environments/__init__.py",
+      "binary": false,
+      "destination_sha256": "029d3cb30688791c150364d9c3cce893a2667fb597464db08b6010f82d1873aa",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "d8cedf470a5a59f64071fbe612d5347d325bc4fdb92532e280f4de5065570361",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/scripts/joint_test.py",
+      "binary": false,
+      "destination_sha256": "1d0d5b31726200ad74b8008ee3cd6535952f3949592eb93e13b3c8a51e2e4e4c",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "94ddcfed7edea792ef6e40f78e237dad14f50e02859c25a780644242ed678bc3",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/scripts/mjcf_test.py",
+      "binary": false,
+      "destination_sha256": "ff75513c36feaed49e81e20bd493aec1d9f9c211b0a6ffa34c9f314addd98610",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "83a640e2c59e480246f98ed58ce98d043f716d44bb49c0e23d0e34e3dcd0df63",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/scripts/record_policy.py",
+      "binary": false,
+      "destination_sha256": "7710cef5859cab020efca988752ba31acfb0e56083053cf564fe4a1f046e9f05",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "7f999f03ef4c798b0f0c35bd6ad193ecb5b1b39d23f984065e0456e7958af99a",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/scripts/test.py",
+      "binary": false,
+      "destination_sha256": "6c3fa05daf46c618b2cfdf20bc2edf73936d3c21386ec685529b31574bcaab79",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "574ddfdf4db498f738b5d6cbaf45cbb8f53c2888011c8442c6f50f2bd899e7c0",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/scripts/train.py",
+      "binary": false,
+      "destination_sha256": "4692ca07772edeab5a0505a6a39080bb83aab67fca0cfe8b647b5c8f1db651bd",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "3fad56fe05b8051eb69622e49a7d3c416cbdb282b7a6d94cfebbd61cfeefd703",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/scripts/__init__.py",
+      "binary": false,
+      "destination_sha256": "5d10af0b0704746a2891027097ecc6fb50afed11255150c834fcfa3569948784",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "ec77f8dc629fa12c5d7267c7188f0ff695365fbb26297cb254cd51decce7d20e",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/visual_domains.py",
+      "binary": false,
+      "destination_sha256": "ec77f8dc629fa12c5d7267c7188f0ff695365fbb26297cb254cd51decce7d20e",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "7f6f1f2e3d51b898f4454c8424379447a30c27afc6ea0bc349cf44c499141528",
+      "destination_relative_path": "packages/maniskill/src/usim_maniskill/__init__.py",
+      "binary": false,
+      "destination_sha256": "dfb7bea4201dd83152f51dbd314ddf3f38aab809ca1a49cdd804d4406cae7538",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "12cd5ff3f613715a2828aefffcf3de7c6f6df6f48dce4bb31235e072b40e11e6",
+      "destination_relative_path": "packages/isaacsim/src/usim_isaacsim/adapter.py",
+      "binary": false,
+      "destination_sha256": "bee010319fd80e61ab267c8e96a56be0059adf359ba4d57c4d027ad695508896",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "ddff2c1d00740e5c3d8ae95e5ce453bb65ad6d88d876918f4e599d47d4acae56",
+      "destination_relative_path": "packages/isaacsim/src/usim_isaacsim/environments/__init__.py",
+      "binary": false,
+      "destination_sha256": "533137cc0b8ae9486e3624bea8630885333cb5763db4fae3fc8f9c9093647243",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "dec79f81320e5bfeb72374c4ac9e1210f09b77caeae91cc92b107773239dc2f8",
+      "destination_relative_path": "packages/isaacsim/src/usim_isaacsim/__init__.py",
+      "binary": false,
+      "destination_sha256": "0b47c26255a55589ea3a2e505ea7aa07a0bf68a7c413b63585c7e7760ae50a3f",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "ba60db82af441e48d74c82fbb81c1fd70db38a2fc093e8bcf8e0d56ef7872c83",
+      "destination_relative_path": "src/usim/robots/assets/crane_x7.xml",
+      "binary": false,
+      "destination_sha256": "08bd425309a114686a5514d35f170f13d575f1af119189f5b90b2bafda3d0b76",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "088d70d1b84ffafa6a370fcc05c6fb2be8b0fbe32d811f605b42a66d9e55148e",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/base_fixed_part.stl",
+      "binary": true,
+      "destination_sha256": "088d70d1b84ffafa6a370fcc05c6fb2be8b0fbe32d811f605b42a66d9e55148e",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "f19d96cf2979faec1b532054e0337e2a73fe96ae4f9d0901a927cc105a013cb8",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/base_revolute_part.stl",
+      "binary": true,
+      "destination_sha256": "f19d96cf2979faec1b532054e0337e2a73fe96ae4f9d0901a927cc105a013cb8",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "9ebea71e30877ed79bedf15429f3b913e55e191e314d65d23d6fca5f891610d5",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/d435i.stl",
+      "binary": true,
+      "destination_sha256": "9ebea71e30877ed79bedf15429f3b913e55e191e314d65d23d6fca5f891610d5",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "e5ba34590639ddd32b8c1bdfc614e16dce2bdf6ddb5dc78b92a06861a8ed6ce0",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/joint_cover.stl",
+      "binary": true,
+      "destination_sha256": "e5ba34590639ddd32b8c1bdfc614e16dce2bdf6ddb5dc78b92a06861a8ed6ce0",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "f6dcac392e36f9a35b69e73b008250221de2017da7c5bf9911306d8a7183699b",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/mounting_plate.stl",
+      "binary": true,
+      "destination_sha256": "f6dcac392e36f9a35b69e73b008250221de2017da7c5bf9911306d8a7183699b",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "17e8c090f29026d2d669340295a29fd529008f7cfe5619dfcadea865440ad528",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/rotating_link_type_1_fixed_part.stl",
+      "binary": true,
+      "destination_sha256": "17e8c090f29026d2d669340295a29fd529008f7cfe5619dfcadea865440ad528",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "e6ab241036a311b7dd3910045ecd5f8434190ebd770bcfc6a440cabd6b5c7d5a",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/rotating_link_type_1_revolute_part.stl",
+      "binary": true,
+      "destination_sha256": "e6ab241036a311b7dd3910045ecd5f8434190ebd770bcfc6a440cabd6b5c7d5a",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "95651dd8d0e9140be0b90ef95726d83d7174ecc246a650c1c25425f3fc2371c7",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/rotating_link_type_2_fixed_part.stl",
+      "binary": true,
+      "destination_sha256": "95651dd8d0e9140be0b90ef95726d83d7174ecc246a650c1c25425f3fc2371c7",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "3a11f8659c2ce9913efd69b2a01c59dd9ee2a4e80dcf98531a43eeae0330ff8b",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/rotating_link_type_2_revolute_part.stl",
+      "binary": true,
+      "destination_sha256": "3a11f8659c2ce9913efd69b2a01c59dd9ee2a4e80dcf98531a43eeae0330ff8b",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "9035a6034c85f52d046e537ec063b293f14c12fd1c8de15da91673b3faff6198",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/rtcorp_logo_name.stl",
+      "binary": true,
+      "destination_sha256": "9035a6034c85f52d046e537ec063b293f14c12fd1c8de15da91673b3faff6198",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "eb4ee6954f4722b7f106e61b33f1cfcb070ed2a700c16210e1683c7e98456739",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/rtcorp_logo_rabbit.stl",
+      "binary": true,
+      "destination_sha256": "eb4ee6954f4722b7f106e61b33f1cfcb070ed2a700c16210e1683c7e98456739",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "5ed5d9f1bf2ff9665583d62fb3cf529292c4377889763368dcf4156b996141de",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_actuator.stl",
+      "binary": true,
+      "destination_sha256": "5ed5d9f1bf2ff9665583d62fb3cf529292c4377889763368dcf4156b996141de",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "bd0452317de5299a089cee383ea8f00097dfaec181a00e2b14440371037d7bc7",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a.stl",
+      "binary": true,
+      "destination_sha256": "bd0452317de5299a089cee383ea8f00097dfaec181a00e2b14440371037d7bc7",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "2c238133aadaa12e8b20015b15d513ef82aadabc1c9eb9769b65b8bc0eee8d51",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_00.stl",
+      "binary": true,
+      "destination_sha256": "2c238133aadaa12e8b20015b15d513ef82aadabc1c9eb9769b65b8bc0eee8d51",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "f767af88e329e07bcf6f1df6bd26243f8b7114f649f8a98ec35c21f8e5863508",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_01.stl",
+      "binary": true,
+      "destination_sha256": "f767af88e329e07bcf6f1df6bd26243f8b7114f649f8a98ec35c21f8e5863508",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "037aa4806c6ac5830f6ec458e5dbca90f98b5cba5938b3b35787af09f5f7ebd4",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_02.stl",
+      "binary": true,
+      "destination_sha256": "037aa4806c6ac5830f6ec458e5dbca90f98b5cba5938b3b35787af09f5f7ebd4",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "4562c66e43d5e667005ac50f6e3043402a082adf64561ba3c9d7ec8f1ec6595a",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_03.stl",
+      "binary": true,
+      "destination_sha256": "4562c66e43d5e667005ac50f6e3043402a082adf64561ba3c9d7ec8f1ec6595a",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "245ab1666833f31f48ee357835420435977b7db072f9dabc873cf193b8cff04b",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_04.stl",
+      "binary": true,
+      "destination_sha256": "245ab1666833f31f48ee357835420435977b7db072f9dabc873cf193b8cff04b",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "d1169e8a08336745a4ba245f0b7d6b7c0b708d3735ba5ca9e9fb98c8da05bce6",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_05.stl",
+      "binary": true,
+      "destination_sha256": "d1169e8a08336745a4ba245f0b7d6b7c0b708d3735ba5ca9e9fb98c8da05bce6",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "d15ff586ccb59926e62c8de38a0538af866927595c157b59bd8239b7fa1713e7",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_06.stl",
+      "binary": true,
+      "destination_sha256": "d15ff586ccb59926e62c8de38a0538af866927595c157b59bd8239b7fa1713e7",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "b4ba8dc5b4239a9a11626d0efebdd4a96fc895831eed374f1153c20a122738d3",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_07.stl",
+      "binary": true,
+      "destination_sha256": "b4ba8dc5b4239a9a11626d0efebdd4a96fc895831eed374f1153c20a122738d3",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "05dc38654807bed3e03032a46c9725e61d654c69137030c758faf06a52d1b1ad",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_08.stl",
+      "binary": true,
+      "destination_sha256": "05dc38654807bed3e03032a46c9725e61d654c69137030c758faf06a52d1b1ad",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "debf0bbb329db9625df9887abb81397f8ed27e89aa057a07512b98d5d4f8e2ba",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_09.stl",
+      "binary": true,
+      "destination_sha256": "debf0bbb329db9625df9887abb81397f8ed27e89aa057a07512b98d5d4f8e2ba",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "a4aa438dd4ad6511b10662527989b20a8e0b5247a10f90274a45b7629f4ad71f",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_10.stl",
+      "binary": true,
+      "destination_sha256": "a4aa438dd4ad6511b10662527989b20a8e0b5247a10f90274a45b7629f4ad71f",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "3cf638c6e307a4f9063bc7e0f40f90b604be4e004bd4b2614c61f874e0fd1163",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_a_convex_11.stl",
+      "binary": true,
+      "destination_sha256": "3cf638c6e307a4f9063bc7e0f40f90b604be4e004bd4b2614c61f874e0fd1163",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "3e61a95081b65f2a872dc9b22335304d74daec058c6f35beffa445afe6e4ade8",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b.stl",
+      "binary": true,
+      "destination_sha256": "3e61a95081b65f2a872dc9b22335304d74daec058c6f35beffa445afe6e4ade8",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "44fe1e1c50cfda8c030124a915c9282cb7879cb24516fb6a70a39871794f0aa4",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_00.stl",
+      "binary": true,
+      "destination_sha256": "44fe1e1c50cfda8c030124a915c9282cb7879cb24516fb6a70a39871794f0aa4",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "5a45cd34135cd2c0ee59d070aaacdf9c85dd73b1f63be86e4f69c8c235f27e88",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_01.stl",
+      "binary": true,
+      "destination_sha256": "5a45cd34135cd2c0ee59d070aaacdf9c85dd73b1f63be86e4f69c8c235f27e88",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "a878a71349b9acfed7568a5524dcaa313a124526dd88f8cbc55004b5eedc9117",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_02.stl",
+      "binary": true,
+      "destination_sha256": "a878a71349b9acfed7568a5524dcaa313a124526dd88f8cbc55004b5eedc9117",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "42dbeb6c139d89f34a216e6997a619aeb23331f45ada7de68fadfb42117cfa47",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_03.stl",
+      "binary": true,
+      "destination_sha256": "42dbeb6c139d89f34a216e6997a619aeb23331f45ada7de68fadfb42117cfa47",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "74c66f52b51d981a4457445e574456df06ce4f66d710281c99c1cfc8fc189b7b",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_04.stl",
+      "binary": true,
+      "destination_sha256": "74c66f52b51d981a4457445e574456df06ce4f66d710281c99c1cfc8fc189b7b",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "d12debeb9daf5238fefbda54c84746e1d09c21c35f958c44ea787c8c6fd7aae4",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_05.stl",
+      "binary": true,
+      "destination_sha256": "d12debeb9daf5238fefbda54c84746e1d09c21c35f958c44ea787c8c6fd7aae4",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "55cac01078a6629dac7d6f6606cff1387eb37e5834620c7c1dea7f5ee0f0293a",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_06.stl",
+      "binary": true,
+      "destination_sha256": "55cac01078a6629dac7d6f6606cff1387eb37e5834620c7c1dea7f5ee0f0293a",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "47656bcbdf0d702a8761397b8ff5aa9ff61d2ae008c0bff65e2a4de58fc40f57",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_07.stl",
+      "binary": true,
+      "destination_sha256": "47656bcbdf0d702a8761397b8ff5aa9ff61d2ae008c0bff65e2a4de58fc40f57",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "d2a91f23c06ee79a7989d431d89528e349f715540da7e7b024499bd706e0a5e8",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_08.stl",
+      "binary": true,
+      "destination_sha256": "d2a91f23c06ee79a7989d431d89528e349f715540da7e7b024499bd706e0a5e8",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "b253b6785e4d96d7e423529e42fb7eec1d4e7305c320afddb1d187bd56752cd0",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_09.stl",
+      "binary": true,
+      "destination_sha256": "b253b6785e4d96d7e423529e42fb7eec1d4e7305c320afddb1d187bd56752cd0",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "d9a2aecc0ee4b7ebd3933e24ea58d1076e1b3eef885d3757ca1814a6c1a561df",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_10.stl",
+      "binary": true,
+      "destination_sha256": "d9a2aecc0ee4b7ebd3933e24ea58d1076e1b3eef885d3757ca1814a6c1a561df",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "9ce60009e57ed20e06e6a06eec6c76983148698b934a3647beafa488123a69dd",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wide_two_finger_gripper_finger_b_convex_11.stl",
+      "binary": true,
+      "destination_sha256": "9ce60009e57ed20e06e6a06eec6c76983148698b934a3647beafa488123a69dd",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "e8a6692983f703a3abea93fb98d68e559ff6715e97cadfee8c27a598e515809f",
+      "destination_relative_path": "src/usim/robots/assets/meshes/collision/wrist.stl",
+      "binary": true,
+      "destination_sha256": "e8a6692983f703a3abea93fb98d68e559ff6715e97cadfee8c27a598e515809f",
+      "normalization": "none"
+    },
+    {
+      "original_sha256": "e62b3b2c95cc922e4dede7489b5091258b0d28ce7be6d5a947bf4dc0219d4bd0",
+      "destination_relative_path": "src/usim/robots/crane_x7.py",
+      "binary": false,
+      "destination_sha256": "7c3e739414443c03d3bf9359164703541bd9db92cc6d5046e70adc6d63fa298e",
+      "normalization": "CRLF_to_LF"
+    },
+    {
+      "original_sha256": "a38cbe233e3e408b1ca97bec814b7534bb03220b15ba2ee8fd82e7ea85967b07",
+      "destination_relative_path": "src/usim/robots/__init__.py",
+      "binary": false,
+      "destination_sha256": "e7d2c3133a6f393d49c2bec68653da296c593893faeadf08d80d3677734705ad",
+      "normalization": "CRLF_to_LF"
+    }
+  ]
+}

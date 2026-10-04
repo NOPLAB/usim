@@ -4,22 +4,31 @@ version = "0.1.0"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "nop", email = "noplab90@gmail.com" }]
-description = "Mobile robot simulation with a Python core, ROS 2 bridge and engine ports"
+description = "General-purpose robot simulation interfaces, configuration and CLI"
 requires-python = ">=3.10,<3.13"
 dependencies = []
 
 [project.scripts]
 usim = "usim.cli:main"
+usim-sim-node = "usim.bridges.simulation_ros2:main"
 
 [project.optional-dependencies]
-usd = ["usd-core==25.5", "numpy>=1.26,<2"]
-isaac = [
-  "isaacsim[all,extscache]==6.1.0.0; python_version == '3.12'",
-  "numpy==2.3.1; python_version == '3.12'",
-]
+genesis = ["usim-genesis[native]==0.1.0"]
+maniskill = ["usim-maniskill[native]==0.1.0"]
+gazebo = ["usim-gazebo==0.1.0"]
+usd = ["usim-isaacsim[usd]==0.1.0"]
+isaac = ["usim-isaacsim[native]==0.1.0"]
 
 [dependency-groups]
-dev = ["pytest>=9.1,<10", "numpy>=1.26,<3", "ruff==0.16.9"]
+dev = [
+  "pytest>=9.1,<10",
+  "numpy>=1.26,<3",
+  "ruff==0.16.9",
+  "usim-genesis==0.1.0",
+  "usim-maniskill==0.1.0",
+  "usim-isaacsim==0.1.0",
+  "usim-gazebo==0.1.0",
+]
 
 [tool.uv]
 extra-index-url = ["https://pypi.nvidia.com"]
@@ -28,7 +37,21 @@ prerelease = "allow"
 environments = ["sys_platform == 'win32'", "sys_platform == 'linux'"]
 conflicts = [
   [{ extra = "usd" }, { extra = "isaac" }],
+  [{ extra = "maniskill" }, { extra = "isaac" }],
+  [{ extra = "genesis" }, { extra = "isaac" }],
+  [{ package = "usim-isaacsim", extra = "native" }, { package = "usim-isaacsim", extra = "usd" }],
+  [{ package = "usim-isaacsim", extra = "native" }, { package = "usim-genesis", extra = "native" }],
+  [{ package = "usim-isaacsim", extra = "native" }, { package = "usim-maniskill", extra = "native" }],
 ]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+usim-genesis = { workspace = true }
+usim-maniskill = { workspace = true }
+usim-isaacsim = { workspace = true }
+usim-gazebo = { workspace = true }
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]
@@ -36,6 +59,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/usim"]
+artifacts = ["src/usim/robots/assets/**/*.xml", "src/usim/robots/assets/**/*.stl"]
 
 [tool.ruff]
 required-version = "==0.16.9"

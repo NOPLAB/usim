@@ -15,7 +15,7 @@ from unittest.mock import patch
 import numpy as np
 
 from usim.ports.isaac import IsaacSimulator, SimulationConfig
-from usim.ports.isaac.sim import _run
+from usim_isaacsim.sim import _run
 from usim.simulation import Ros2Config, Velocity
 from dataclasses import replace
 
@@ -193,7 +193,7 @@ class StandaloneIsaacTest(unittest.TestCase):
                 return
             with (
                 patch.dict(sys.modules, {**modules, 'rclpy': None, 'rvln_msgs': None}),
-                patch('usim.ports.isaac.sim.time.monotonic', return_value=1.0),
+                patch('usim_isaacsim.sim.time.monotonic', return_value=1.0),
                 contextlib.redirect_stdout(output),
             ):
                 _run(config, IsaacSimulator(robot_prim_path='/World/Custom'))
@@ -220,7 +220,7 @@ class StandaloneIsaacTest(unittest.TestCase):
             )
             with (
                 patch.dict(sys.modules, {**modules, 'rclpy': ros}),
-                patch('usim.ports.isaac.sim._load_ros_python'),
+                patch('usim_isaacsim.sim._load_ros_python'),
                 patch('usim.bridges.ros2.Bridge', return_value=bridge),
                 contextlib.redirect_stdout(io.StringIO()),
                 self.assertRaisesRegex(RuntimeError, 'depth camera frame unavailable'),
@@ -234,7 +234,7 @@ class StandaloneIsaacTest(unittest.TestCase):
             driven_output = io.StringIO()
             with (
                 patch.dict(sys.modules, {**modules, 'rclpy': ros}),
-                patch('usim.ports.isaac.sim._load_ros_python'),
+                patch('usim_isaacsim.sim._load_ros_python'),
                 patch('usim.bridges.ros2.Bridge', return_value=bridge),
                 contextlib.redirect_stdout(driven_output),
             ):

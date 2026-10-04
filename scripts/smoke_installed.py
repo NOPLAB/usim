@@ -85,6 +85,8 @@ def main() -> None:
     with tempfile.TemporaryDirectory(prefix='usim-installed-') as directory:
         root = Path(directory)
         invoke([usim, '--help'], root, env)
+        invoke([usim, 'run', '--help'], root, env)
+        invoke([usim, 'backends'], root, env)
         invoke([usim, 'simulate', '--help'], root, env)
         invoke([usim, 'convert-world', '--help'], root, env)
         robot = root / 'robot.urdf'
@@ -136,8 +138,7 @@ def main() -> None:
                 'import importlib.util,usim; '
                 'assert importlib.util.find_spec("isaac_rvln") is None; '
                 'assert importlib.util.find_spec("isaac_r2r") is None; '
-                'from usim.ports.isaac import IsaacSimulator; '
-                'from usim.ports.gazebo import GazeboSimulator',
+                'from usim import list_simulators; list_simulators()',
             ],
             root,
             env,

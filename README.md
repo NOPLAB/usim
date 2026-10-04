@@ -1,7 +1,12 @@
 # usim
 
-Mobile robot simulation with a dependency-free Python core, a standard ROS 2
-bridge, and Gazebo Classic / Isaac Sim ports.
+Mobile robot and manipulator simulation with a dependency-free Python core,
+standard ROS 2 bridges, and Gazebo Classic, Isaac Sim, Genesis and ManiSkill.
+
+`usim` owns the robot-neutral interfaces, configuration, CLI and bundled
+CRANE-X7 model. Engines are separately installable workspace packages:
+`usim_genesis`, `usim_isaacsim`, `usim_maniskill` and `usim_gazebo`.
+See [engine setup and simulation workflows](docs/engines.md).
 
 ## Install and check
 
@@ -16,6 +21,8 @@ uv build
 ```
 
 The base wheel has no runtime dependencies. Native engines and ROS are optional.
+`usim backends` lists installed providers and their execution capabilities
+without initializing native engines.
 See [Gazebo](docs/gazebo.md), [Isaac](docs/isaac.md), and
 [the shared contract](docs/architecture.md).
 For an optional downloaded world, see [Virtual Tsukuba Challenge](docs/vtc.md).
@@ -80,9 +87,13 @@ GazeboSimulator().run(
 )
 ```
 
-Both ports implement `run(configuration, stop=event)` and own their lifecycle.
+Continuous runners implement `run(configuration, stop=event)` and own their lifecycle.
 The core exports robot geometry, immutable configuration, velocity/state data,
-wheel math and motor gating. There is no fictitious lockstep `step()` API.
+wheel math and motor gating. Mobile engines do not expose a fictitious lockstep
+`step()` API. Native episode providers expose `reset`, `step`, observation and
+`close` through the same `usim` namespace. These are engine capabilities, not
+separate mobile/arm categories. One external articulation can contain wheels,
+an arm and a gripper.
 
 Motion is controlled through standard ROS 2: `/cmd_vel`, `/motor_power`
 (`std_srvs/SetBool`), `/odom`, `/clock`, RGB and depth images. Motors start
@@ -94,9 +105,10 @@ application ROS interfaces.
 
 ## Layout and smoke checks
 
-- `src/usim/`: pure contracts and robot authoring.
+- `src/usim/`: pure contracts, factory, CLI, bridges and robot descriptions.
 - `src/usim/bridges/`: optional standard ROS I/O.
-- `src/usim/ports/`: native engine execution.
+- `packages/{genesis,isaacsim,maniskill,gazebo}/`: independent engine distributions.
+- `src/usim/ports/`: lightweight public compatibility facades for existing mobile clients.
 - `examples/worlds/`: small owned SDF demonstration worlds.
 - `test/` and `scripts/`: regressions and real control/sensor smokes.
 

@@ -2,7 +2,7 @@
 
 import unittest
 
-from usim.ports.isaac.contacts import ObstacleContactLog
+from usim_isaacsim.contacts import ObstacleContactLog
 
 
 class ContactLogTest(unittest.TestCase):

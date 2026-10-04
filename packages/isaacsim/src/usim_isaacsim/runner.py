@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from usim.simulation import Ros2Config, SimulationConfig
 
 if TYPE_CHECKING:
-    from usim.ports.isaac.sim import IsaacSimulator
+    from usim_isaacsim.sim import IsaacSimulator
 
 
 def run(
@@ -130,7 +130,7 @@ def run(
 
 
 def main() -> None:
-    from usim.ports.isaac.sim import IsaacSimulator, _run
+    from usim_isaacsim.sim import IsaacSimulator, _run
 
     data = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
     # Kit must not interpret the supervisor's JSON path as a scene to open.

@@ -10,6 +10,8 @@ dist/
 
 # Runtime assets and private datasets
 assets/
+!src/usim/robots/assets/
+!src/usim/robots/assets/**
 runs/
 upstream/
 .uv-cache/

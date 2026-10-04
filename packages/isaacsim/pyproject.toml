@@ -1,0 +1,30 @@
+[project]
+name = "usim-isaacsim"
+version = "0.1.0"
+description = "Isaac Sim engine for usim"
+license = "MIT"
+requires-python = ">=3.10,<3.13"
+dependencies = ["usim==0.1.0"]
+
+[project.optional-dependencies]
+usd = ["usd-core==25.5", "numpy>=1.26,<2"]
+native = [
+  "isaacsim[all,extscache]==6.1.0.0; python_version == '3.12'",
+  "numpy==2.3.1; python_version == '3.12'",
+]
+
+[project.entry-points."usim.simulators"]
+isaacsim = "usim_isaacsim.adapter:IsaacSimSimulator"
+
+[project.entry-points."usim.runners"]
+isaacsim = "usim_isaacsim:IsaacSimulator"
+
+[tool.uv.sources]
+usim = { workspace = true }
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/usim_isaacsim"]

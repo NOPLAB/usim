@@ -1,4 +1,4 @@
-"""Mobile robot simulation and robot authoring commands."""
+"""Robot simulation and robot authoring commands."""
 
 from __future__ import annotations
 
@@ -10,6 +10,16 @@ from typing import Callable, Iterable
 from usim.robot import MobileRobot, render_robot
 
 Registrar = Callable[['argparse._SubParsersAction[argparse.ArgumentParser]'], None]
+
+
+def _backends(args: argparse.Namespace) -> dict[str, list[str]]:
+    from importlib.metadata import entry_points
+
+    from usim.factory import capabilities
+
+    names = {entry.name for entry in entry_points(group='usim.runners')}
+    names.update(entry.name for entry in entry_points(group='usim.simulators'))
+    return {name: sorted(capabilities(name)) for name in sorted(names)}
 
 
 def _create_robot(args: argparse.Namespace) -> dict[str, str | float | list[float]]:
@@ -63,10 +73,13 @@ def build_parser(registrars: Iterable[Registrar] | None = None) -> argparse.Argu
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     _register_robot(commands)
+    backends = commands.add_parser('backends', help='list installed engines and execution models')
+    backends.set_defaults(handler=_backends)
     if registrars is None:
-        from usim.ports.isaac.cli import register
+        from usim.runtime_cli import register
+        from usim.episode_cli import register as register_episode
 
-        registrars = (register,)
+        registrars = (register, register_episode)
     for register in registrars:
         register(commands)
     return parser
