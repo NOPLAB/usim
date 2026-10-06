@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 import pytest
 
 
-SCRIPT = Path(__file__).parents[1] / 'scripts' / 'vtc' / 'fetch_vtc_world.py'
+SCRIPT = Path(__file__).parents[1] / 'src' / 'usim_env_vtc' / 'fetch_vtc_world.py'
 SPEC = importlib.util.spec_from_file_location('fetch_vtc_world', SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 vtc = importlib.util.module_from_spec(SPEC)

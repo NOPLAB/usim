@@ -25,7 +25,11 @@ The base wheel has no runtime dependencies. Native engines and ROS are optional.
 without initializing native engines.
 See [Gazebo](docs/gazebo.md), [Isaac](docs/isaac.md), and
 [the shared contract](docs/architecture.md).
-For an optional downloaded world, see [Virtual Tsukuba Challenge](docs/vtc.md).
+For an optional downloaded world, see [Virtual Tsukuba Challenge](docs/vtc/README.md).
+For the full old-course, source-preserving public point-cloud map, see
+[full Tsukuba map and source licenses](docs/vtc/tsukuba-full-map/README.md).
+Its tooling belongs to `usim`; the downloaded and generated map data is
+CC BY-NC-SA 4.0, not covered by the software's MIT license.
 
 ## Run a robot
 

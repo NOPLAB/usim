@@ -1,0 +1,22 @@
+{
+  "license": "CC-BY-NC-SA-4.0",
+  "primary": "2019",
+  "source_sha256": "119250f3b153bd0948b05e441cee30459bed45ce05cdf5749267bc2fc703309d",
+  "source19_to_vtc": [
+    [0.9999025240885833, 0.013962174661619106, 2.176646245321849e-10, 261.518520148086],
+    [-0.013962174661619184, 0.9999025240885827, 2.4547435283147664e-10, -150.47783388778015],
+    [-2.1421604646597402e-10, -2.4848950011334296e-10, 1.0, 2.4900001768879445],
+    [0.0, 0.0, 0.0, 1.0]
+  ],
+  "heldout_distance_quantiles_m": [
+    0.000003452339223137176,
+    0.000011670933141161958,
+    0.000019596711794410383,
+    0.000031743207896303065
+  ],
+  "method": "Axis/handedness search, ICP, exact nearest-pair SVD refinement against native VTC Unsplit world coordinates",
+  "geographic_survey_accuracy_established": false,
+  "source_records_modified": false,
+  "attribution": "fuRo; Hara and Tomono, Advanced Robotics 34(6), 375-387, 2020",
+  "source_catalog": "https://github.com/tsukubachallenge/tc-datasets"
+}

@@ -22,7 +22,7 @@ Only eight FBX files under `Environment/Terrain/fbx/` and `LICENSE` are fetched:
 `Tsukuba-Terrain.fbx`. The geometry
 hashes are the SHA256 object IDs in the pinned upstream Git LFS pointers; the
 license hash is computed from the regular Git blob. The manifest in
-`scripts/vtc/fetch_vtc_world.py` records sizes and digests.
+`src/usim_env_vtc/fetch_vtc_world.py` records sizes and digests.
 
 City Hall (`cityhall.blend`, `CityHall.blend`, or `City Hall.fbx`) is excluded.
 Although the Blender README calls it Apache-2.0, its source in
@@ -48,10 +48,10 @@ The converter mounts only the output directory and its own read-only script;
 `docker run --rm` removes the conversion container.
 
 ```sh
-uv run python scripts/vtc/fetch_vtc_world.py --out assets/vtc
+uv run python src/usim_env_vtc/fetch_vtc_world.py --out assets/vtc
 
 # Optional Isaac-compatible USD, using the separate USD environment:
-uv run --extra usd python scripts/vtc/fetch_vtc_world.py --out assets/vtc --usd
+uv run --extra usd python src/usim_env_vtc/fetch_vtc_world.py --out assets/vtc --usd
 ```
 
 The USD extra pins `usd-core==25.5` and `numpy<2`; it is mutually exclusive with
@@ -92,7 +92,16 @@ uv run --extra isaac usim simulate --headless --max-seconds 5 \
   --world assets/vtc/world.usdc --robot-urdf runs/vtc/robot.urdf
 ```
 
-Build `usim-gazebo:local` as described in [Gazebo](gazebo.md). The port resolves
+Build `usim-gazebo:local` as described in [Gazebo](../gazebo.md). The port resolves
 relative `meshes/` URIs and mounts their resource directory read-only. See
-[Isaac](isaac.md) for the optional native runtime. Conversion needs no native
+[Isaac](../isaac.md) for the optional native runtime. Conversion needs no native
 Isaac runtime or GPU.
+
+## Related notes
+
+- [Full old-course Tsukuba map](tsukuba-full-map/README.md): public point-cloud
+  reconstruction, the composed local stage and the source licensing audit.
+- [Road surface repair](road-repair.md): findings on paved-surface spikes and
+  the derived, smoothed terrain copy.
+- [LiDAR-supported park vegetation](vegetation.md): derived tree placement and
+  streamed tree geometry over the road-corrected local scene.

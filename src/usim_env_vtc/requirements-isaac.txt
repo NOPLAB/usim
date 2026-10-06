@@ -1,0 +1,5 @@
+# Isolated map-inspection runtime validated with the full-area viewer.
+# This does not change the usim simulation backend's separate SDK pin.
+isaacsim[all,extscache]==6.0.1.0
+numpy==2.3.1
+anyio==4.11.0

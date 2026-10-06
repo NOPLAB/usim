@@ -58,7 +58,7 @@ requires = ["hatchling>=1.27,<2"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/usim"]
+packages = ["src/usim", "src/usim_env_vtc"]
 artifacts = ["src/usim/robots/assets/**/*.xml", "src/usim/robots/assets/**/*.stl"]
 
 [tool.ruff]

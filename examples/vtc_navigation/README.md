@@ -13,7 +13,7 @@ to imply endorsement.
 ## Build and run
 
 First fetch and convert the VTC road/terrain subset as described in
-[`docs/vtc.md`](../../docs/vtc.md). Then build this optional ROS overlay from
+[`docs/vtc/README.md`](../../docs/vtc/README.md). Then build this optional ROS overlay from
 the usim repository root (the first build creates the standalone Gazebo base):
 
 ```sh
