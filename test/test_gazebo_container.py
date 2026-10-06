@@ -100,22 +100,82 @@ def test_container_model_path_keeps_builtin_gazebo_models(
     assert model_path.endswith(':/usr/share/gazebo-11/models')
 
 
-@pytest.mark.parametrize(('engine', 'prefix'), [('docker', '^/'), ('podman', '^')])
+def test_owned_container_is_removed_when_container_enumeration_times_out(
+    config: SimulationConfig,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Given: creation succeeds, but the engine's global container listing hangs.
+    created = []
+    removed = []
+
+    def run(command, **kwargs):
+        if command[1] == 'create':
+            created.append(command[command.index('--name') + 1])
+        if command[1] == 'ps':
+            raise subprocess.TimeoutExpired(command, kwargs['timeout'])
+        if command[1] == 'rm':
+            removed.append(command[-1])
+        return subprocess.CompletedProcess(command, 0, stdout='')
+
+    class FinishedProcess:
+        def wait(self, timeout=None):
+            return 0
+
+    monkeypatch.setattr(subprocess, 'run', run)
+    monkeypatch.setattr(subprocess, 'Popen', lambda command: FinishedProcess())
+    # When: the owned simulator finishes.
+    GazeboSimulator(engine='podman').run(replace(config, headless=True))
+    # Then: cleanup removes that container without depending on global enumeration.
+    assert removed == created and len(removed) == 1
+
+
+@pytest.mark.parametrize('engine', ['docker', 'podman'])
 def test_engine_selects_every_container_cli_call(
     config: SimulationConfig,
     container_cli: ContainerCli,
     engine: Literal['docker', 'podman'],
-    prefix: str,
 ) -> None:
     GazeboSimulator(engine=engine).run(replace(config, headless=True))
     commands = container_cli.commands
     assert [command[:2] for command in commands] == [
         [engine, 'create'],
         [engine, 'start'],
-        [engine, 'ps'],
         [engine, 'rm'],
     ]
-    assert commands[2][-1] == f'name={prefix}{commands[1][-1]}$'
+    assert commands[2][-1] == commands[1][-1]
+
+
+@pytest.mark.parametrize(('engine', 'prefix'), [('docker', '^/'), ('podman', '^')])
+def test_uncertain_creation_removes_only_its_exact_owned_name(
+    config: SimulationConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    engine: Literal['docker', 'podman'],
+    prefix: str,
+) -> None:
+    # Given: the create command fails after partially creating its named container.
+    commands = []
+
+    def run(command, **kwargs):
+        commands.append(command)
+        if command[1] == 'create':
+            raise subprocess.CalledProcessError(1, command)
+        return subprocess.CompletedProcess(command, 0, stdout='owned\n')
+
+    monkeypatch.setattr(subprocess, 'run', run)
+    # When: the backend propagates the engine failure.
+    with pytest.raises(subprocess.CalledProcessError):
+        GazeboSimulator(engine=engine).run(replace(config, headless=True))
+    # Then: partial cleanup remains limited to the exact UUID it tried to create.
+    name = commands[0][commands[0].index('--name') + 1]
+    assert commands[1] == [
+        engine,
+        'ps',
+        '--all',
+        '--quiet',
+        '--filter',
+        f'name={prefix}{name}$',
+    ]
+    assert commands[2] == [engine, 'rm', '--force', name]
 
 
 def test_host_dds_settings_are_forwarded_only_when_set(

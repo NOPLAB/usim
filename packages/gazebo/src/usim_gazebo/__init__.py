@@ -211,8 +211,10 @@ class GazeboSimulator:
                 )
             )
             process = None
+            created = False
             try:
                 subprocess.run(command, check=True, timeout=60)
+                created = True
                 process = subprocess.Popen([engine, 'start', '--attach', name])
                 while True:
                     try:
@@ -229,16 +231,19 @@ class GazeboSimulator:
                     raise RuntimeError(f'Gazebo container exited with status {status}')
             finally:
                 # Force-removal also kills descendants if native graceful cleanup failed.
-                # Docker reports names with a leading slash; Podman does not.
-                prefix = '^/' if engine == 'docker' else '^'
-                owned = subprocess.run(
-                    [engine, 'ps', '--all', '--quiet', '--filter', f'name={prefix}{name}$'],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=15,
-                )
-                if owned.stdout.strip():
+                # A successful create already proves ownership. Only an uncertain
+                # creation needs an exact-name lookup before removal.
+                if not created:
+                    prefix = '^/' if engine == 'docker' else '^'
+                    owned = subprocess.run(
+                        [engine, 'ps', '--all', '--quiet', '--filter', f'name={prefix}{name}$'],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=15,
+                    )
+                    created = bool(owned.stdout.strip())
+                if created:
                     subprocess.run([engine, 'rm', '--force', name], check=True, timeout=30)
                 if process is not None:
                     process.wait(timeout=15)
