@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import sys
+import threading
 from dataclasses import MISSING, fields
 from pathlib import Path
 
@@ -46,17 +48,73 @@ def run(args) -> None:
     from usim.factory import create_runner
 
     configuration = configured(args)
+    gazebo_options = {
+        name: getattr(args, name)
+        for name in ('engine', 'image', 'network', 'fastdds_profile')
+        if getattr(args, name, None) is not None
+    }
+    lidar_options = {
+        field: getattr(args, 'lidar_' + field)
+        for field in (
+            'update_rate',
+            'horizontal_samples',
+            'min_angle',
+            'max_angle',
+            'range_min',
+            'range_max',
+        )
+        if getattr(args, 'lidar_' + field, None) is not None
+    }
+    lidar_link = getattr(args, 'lidar_link', None)
+    lidar_frame = getattr(args, 'lidar_frame', None)
+    lidar_topic = getattr(args, 'lidar_topic', None)
+    if args.backend != 'gazebo' and (
+        gazebo_options
+        or lidar_link is not None
+        or lidar_frame is not None
+        or lidar_topic is not None
+        or lidar_options
+    ):
+        raise ValueError('container and lidar options require --backend gazebo')
+    if lidar_link is None and (
+        lidar_frame is not None or lidar_topic is not None or lidar_options
+    ):
+        raise ValueError('lidar options require --lidar-link')
+    if lidar_link is not None:
+        if lidar_frame is None or lidar_topic is None:
+            raise ValueError('--lidar-link requires --lidar-frame and --lidar-topic')
+        from usim_gazebo import GazeboLidarConfig
+
+        gazebo_options['lidar'] = GazeboLidarConfig(
+            link_name=lidar_link, frame_name=lidar_frame, topic=lidar_topic, **lidar_options
+        )
     if args.backend == 'gazebo':
-        create_runner('gazebo').run(configuration)
+        runner = create_runner('gazebo', **gazebo_options)
     else:
-        create_runner(
+        runner = create_runner(
             'isaacsim',
             robot_prim_path=args.robot_prim_path,
             environment_prim_path=args.environment_prim_path,
             camera_prim_path=args.camera_prim_path,
             ground_name=args.ground_name,
             contact_out=args.contact_out,
-        ).run(configuration)
+        )
+    if not getattr(args, 'stop_on_stdin', False):
+        runner.run(configuration)
+        return
+    stop = threading.Event()
+
+    def read_stop() -> None:
+        while not stop.is_set():
+            line = sys.stdin.readline()
+            if not line or line.strip() == 'stop':
+                stop.set()
+                return
+
+    threading.Thread(target=read_stop, daemon=True).start()
+    runner.run(configuration, stop=stop)
+    if not stop.is_set() and configuration.max_seconds == 0:
+        raise RuntimeError('simulation runner exited before a stop request')
 
 
 def add_arguments(
@@ -144,5 +202,18 @@ def register(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> N
     simulate = commands.add_parser('simulate', help='simulate a mobile robot with ROS 2')
     add_arguments(simulate)
     simulate.add_argument('--backend', choices=('isaac', 'isaacsim', 'gazebo'), default='isaacsim')
+    simulate.add_argument(
+        '--stop-on-stdin', action='store_true', help='stop on a stdin stop line or EOF'
+    )
+    simulate.add_argument('--engine', choices=('docker', 'podman'), help='Gazebo container engine')
+    simulate.add_argument('--image', help='Gazebo container image')
+    simulate.add_argument('--network', help='Gazebo container network')
+    simulate.add_argument('--fastdds-profile', type=Path, help='Gazebo Fast DDS profile')
+    simulate.add_argument('--lidar-link', help='enable Gazebo lidar on this robot link')
+    simulate.add_argument('--lidar-frame', help='required frame name when lidar is enabled')
+    simulate.add_argument('--lidar-topic', help='required ROS topic when lidar is enabled')
+    for option in ('update-rate', 'min-angle', 'max-angle', 'range-min', 'range-max'):
+        simulate.add_argument('--lidar-' + option, type=float)
+    simulate.add_argument('--lidar-horizontal-samples', type=int)
     simulate.set_defaults(handler=run)
     register_world(commands)

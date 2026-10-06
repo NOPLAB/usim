@@ -63,6 +63,36 @@ uv run --extra isaac usim run --engine isaacsim --compute gpu \
 wheel/ROS options remain available; see [Gazebo](gazebo.md) and [Isaac](isaac.md).
 The difference is execution capability, not robot category.
 
+For a downstream-owned session, invoke the same CLI with `--stop-on-stdin`:
+
+```sh
+python -B -m usim.cli simulate --backend gazebo \
+  --world room.sdf --robot-urdf robot.urdf --headless --stop-on-stdin
+```
+
+A `stop` line or stdin EOF requests graceful runner cleanup and exits successfully.
+Other lines are ignored. For indefinite sessions (`--max-seconds 0`, the default),
+a runner return before a stop request fails with a nonzero exit status. A positive
+`--max-seconds` still permits normal deadline completion. Logs continue to use
+inherited stdout/stderr, so the owner can redirect both to its simulator log.
+
+Gazebo container options are `--engine docker|podman` (default `docker`),
+`--image` (default `usim-gazebo:local`), `--network` (default `host`), and
+`--fastdds-profile PATH` (default none). These options require `--backend gazebo`.
+
+`--lidar-link LINK` enables Gazebo's planar ray sensor and requires explicit
+`--lidar-frame FRAME` and `--lidar-topic /TOPIC`. Without `--lidar-link`, lidar is
+disabled. Optional settings retain `GazeboLidarConfig` defaults:
+
+| Flag | Default |
+| --- | --- |
+| `--lidar-update-rate` | `10.0` Hz |
+| `--lidar-horizontal-samples` | `720` |
+| `--lidar-min-angle` | `-pi` radians |
+| `--lidar-max-angle` | `pi` radians |
+| `--lidar-range-min` | `0.1` m |
+| `--lidar-range-max` | `10.0` m |
+
 ## Python API
 
 ```python

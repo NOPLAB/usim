@@ -15,7 +15,9 @@ class EntryPointTest(unittest.TestCase):
 import importlib.abc, sys
 class Guard(importlib.abc.MetaPathFinder):
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split('.')[0] in {'numpy', 'PIL', 'pxr', 'rclpy', 'isaacsim', 'omni'}:
+        if fullname.split('.')[0] in {
+            'numpy', 'PIL', 'pxr', 'rclpy', 'isaacsim', 'omni', 'usim_gazebo'
+        }:
             raise AssertionError('unexpected execution import: ' + fullname)
 sys.meta_path.insert(0, Guard())
 """
