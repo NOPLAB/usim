@@ -105,3 +105,5 @@ Isaac runtime or GPU.
   the derived, smoothed terrain copy.
 - [LiDAR-supported park vegetation](vegetation.md): derived tree placement and
   streamed tree geometry over the road-corrected local scene.
+- [Original authored models](authored-models.md): standalone artwork replacement,
+  retained placements/road repair and remaining geographic-data provenance.
