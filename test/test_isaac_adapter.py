@@ -1,6 +1,7 @@
 """Deterministic Isaac adapter fixtures; these do not claim GPU physics validation."""
 
 import sys
+import tomllib
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
@@ -8,6 +9,7 @@ import numpy as np
 import pytest
 
 from usim.types import JointCommand, SimulatorConfig
+import usim_isaacsim.adapter as adapter
 from usim_isaacsim.adapter import IsaacSimSimulator
 from usim.robots.crane_x7 import CraneX7Config
 
@@ -25,6 +27,7 @@ def native(monkeypatch):
         names=list(reversed(CraneX7Config.ALL_JOINT_NAMES)),
         roots=1,
         missing_output=False,
+        plugins=[],
     )
 
     def module(name, **attributes):
@@ -39,15 +42,18 @@ def native(monkeypatch):
         return result
 
     class App:
-        def __init__(self, settings):
+        def __init__(self, settings, *, experience=''):
             state.events.append('app')
             self.settings, self.closed = settings, False
+            self.experience = experience
             state.apps.append(self)
 
         def is_running(self):
             return not self.closed
 
         def close(self):
+            if self.settings.get('fast_shutdown', True):
+                raise SystemExit(0)
             self.closed = True
             state.events.append('close')
 
@@ -103,28 +109,15 @@ def native(monkeypatch):
         def get_dof_index(self, name):
             return self.dof_names.index(name)
 
-        def get_dof_limits(self):
-            return np.tile([-3.0, 3.0], (len(self.dof_names), 1))
+        @property
+        def dof_properties(self):
+            properties = np.zeros(len(self.dof_names), dtype=[('lower', float), ('upper', float)])
+            properties['lower'] = -3.0
+            properties['upper'] = 3.0
+            return properties
 
         def get_articulation_controller(self):
-            return self
-
-        def get_gains(self):
-            return self.kp, self.kd
-
-        def set_gains(self, *, kps, kds):
-            self.kp, self.kd = kps.copy(), kds.copy()
-
-        def set_max_efforts(self, efforts, *, joint_indices):
-            self.efforts = np.zeros(len(self.dof_names))
-            self.efforts[joint_indices] = efforts
-
-        def switch_control_mode(self, mode):
-            assert mode == 'position'
-            self.modes[:] = mode
-
-        def switch_dof_control_mode(self, *, dof_index, mode):
-            self.modes[dof_index] = mode
+            return Controller(self)
 
         def set_joint_positions(self, positions, *, joint_indices):
             self.qpos[joint_indices] = positions
@@ -143,6 +136,27 @@ def native(monkeypatch):
                 self.targets[action.joint_indices] = action.joint_positions
             if hasattr(action, 'joint_velocities'):
                 self.velocity_targets[action.joint_indices] = action.joint_velocities
+
+    class Controller:
+        def __init__(self, robot):
+            self.robot = robot
+
+        def get_gains(self):
+            return self.robot.kp, self.robot.kd
+
+        def set_gains(self, *, kps, kds):
+            self.robot.kp, self.robot.kd = kps.copy(), kds.copy()
+
+        def set_max_efforts(self, efforts, *, joint_indices):
+            self.robot.efforts = np.zeros(len(self.robot.dof_names))
+            self.robot.efforts[joint_indices] = efforts
+
+        def switch_control_mode(self, mode):
+            assert mode == 'position'
+            self.robot.modes[:] = mode
+
+        def switch_dof_control_mode(self, *, dof_index, mode):
+            self.robot.modes[dof_index] = mode
 
     class Body:
         def __init__(self, prim_path, name, position=None, **kwargs):
@@ -165,6 +179,7 @@ def native(monkeypatch):
         def __init__(self, **settings):
             assert state.events[0] == 'app'
             self.settings, self.steps, self.resets = settings, 0, 0
+            self.instance_cleared = False
             self.scene = SimpleNamespace(
                 add=lambda item: item, add_default_ground_plane=lambda: None
             )
@@ -188,6 +203,7 @@ def native(monkeypatch):
             state.events.append('stop')
 
         def clear_instance(self):
+            self.instance_cleared = True
             state.events.append('clear')
 
     class ImporterConfig:
@@ -226,6 +242,10 @@ def native(monkeypatch):
         state.events.append('capture')
 
     module('isaacsim', SimulationApp=App)
+    module(
+        'carb',
+        get_framework=lambda: SimpleNamespace(get_plugins=lambda: state.plugins),
+    )
     module('isaacsim.core.api', World=World)
     module('isaacsim.core.api.objects', DynamicCuboid=Body)
     module('isaacsim.core.prims', SingleArticulation=Robot, SingleRigidPrim=Body)
@@ -326,6 +346,101 @@ def test_shutdown_failure_still_releases_app_singleton_and_imports(native, monke
     assert native.apps[0].closed and 'clear' in native.events
     assert not directory.exists() and not sim.is_running
     sim.close()
+
+
+def test_native_resources_released_before_app_shutdown(native, monkeypatch):
+    sim = IsaacSimSimulator(config())
+    close_app = native.apps[0].close
+
+    def close_without_native_references():
+        assert all(
+            vars(sim)[name] is None for name in ('_world', '_robot', '_stage', '_camera', '_cube')
+        )
+        assert vars(sim)['_fingers'] == []
+        assert native.worlds[0].instance_cleared
+        close_app()
+
+    monkeypatch.setattr(native.apps[0], 'close', close_without_native_references)
+    sim.close()
+
+
+@pytest.mark.parametrize(
+    ('obs_mode', 'render_mode', 'minimal'),
+    [('state', 'none', True), ('rgb', 'none', False), ('state', 'human', False)],
+)
+def test_headless_state_uses_native_physics_experience(native, obs_mode, render_mode, minimal):
+    sim = IsaacSimSimulator(config(obs_mode=obs_mode, render_mode=render_mode))
+    experience = native.apps[0].experience
+    if minimal:
+        settings = tomllib.loads(Path(experience).read_text())
+        assert set(settings['dependencies']) == {
+            'omni.isaac.ml_archive',
+            'omni.kit.renderer.core',
+            'isaacsim.core.api',
+            'isaacsim.asset.importer.urdf',
+            'omni.kit.loop-isaac',
+        }
+    else:
+        assert experience == ''
+    sim.close()
+
+
+def test_linux_shutdown_keeps_only_mapped_provider_code_until_exit(native, monkeypatch, tmp_path):
+    sim = IsaacSimSimulator(config())
+    loaded = str((tmp_path / 'loaded.plugin.so').resolve())
+    unloaded = str((tmp_path / 'unloaded.plugin.so').resolve())
+    native.plugins = [
+        SimpleNamespace(libPath=loaded),
+        SimpleNamespace(libPath=unloaded),
+        SimpleNamespace(libPath=''),
+    ]
+    monkeypatch.setattr(adapter.sys, 'platform', 'linux')
+    for name, value in (
+        ('RTLD_NOW', 2),
+        ('RTLD_LOCAL', 0),
+        ('RTLD_NOLOAD', 4),
+        ('RTLD_NODELETE', 4096),
+    ):
+        monkeypatch.setattr(adapter.os, name, value, raising=False)
+
+    def maps(path):
+        assert path == Path('/proc/self/maps')
+        return f'1000-2000 r-xp 0000 00:01 1 {loaded}\n2000-3000 rw-p 0000 00:00 0\n'
+
+    monkeypatch.setattr(Path, 'read_text', maps)
+    retained = []
+
+    def keep_provider(path, *, mode):
+        retained.append((path, mode))
+        native.events.append('retain')
+
+    monkeypatch.setattr(adapter.ctypes, 'CDLL', keep_provider)
+    sim.close()
+    sim.close()
+    assert retained == [(loaded, 2 | 4 | 4096)]
+    assert native.events[-4:] == ['stop', 'clear', 'retain', 'close']
+    assert native.apps[0].closed and not sim.is_running
+
+
+def test_provider_retention_failure_is_not_reported_as_success(native, monkeypatch, tmp_path):
+    sim = IsaacSimSimulator(config())
+    loaded = str((tmp_path / 'loaded.plugin.so').resolve())
+    native.plugins = [SimpleNamespace(libPath=loaded)]
+    monkeypatch.setattr(adapter.sys, 'platform', 'linux')
+    for name in ('RTLD_NOW', 'RTLD_LOCAL', 'RTLD_NOLOAD', 'RTLD_NODELETE'):
+        monkeypatch.setattr(adapter.os, name, 0, raising=False)
+    monkeypatch.setattr(Path, 'read_text', lambda path: f'1000-2000 r-xp 0000 00:01 1 {loaded}\n')
+
+    def fail_retention(*args, **kwargs):
+        raise OSError('provider could not be retained')
+
+    monkeypatch.setattr(adapter.ctypes, 'CDLL', fail_retention)
+    with pytest.raises(OSError, match='provider could not be retained'):
+        sim.close()
+    assert not native.apps[0].closed
+    monkeypatch.setattr(adapter.ctypes, 'CDLL', lambda *args, **kwargs: None)
+    sim.close()
+    assert native.apps[0].closed
 
 
 @pytest.mark.parametrize('suffix', ['.xml', '.urdf', '.usd'])

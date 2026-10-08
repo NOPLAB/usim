@@ -5,6 +5,10 @@
 
 from __future__ import annotations
 
+import ctypes
+import gc
+import os
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
@@ -67,6 +71,7 @@ class IsaacSimSimulator(EpisodeSimulator):
         # Native objects are loaded dynamically after Kit starts.
         self._app: Any = None
         self._world: Any = None
+        self._stage: Any = None
         self._robot: Any = None
         self._camera: Any = None
         self._assets: TemporaryDirectory[str] | None = None
@@ -108,10 +113,16 @@ class IsaacSimSimulator(EpisodeSimulator):
                 'headless': self.config.render_mode != 'human',
                 'multi_gpu': False,
                 'enable_crashreporter': False,
+                'fast_shutdown': False,
                 'width': 640,
                 'height': 480,
                 'samples_per_pixel_per_frame': 1,
-            }
+            },
+            experience=(
+                str(Path(__file__).with_name('headless.kit'))
+                if self.config.obs_mode == 'state' and self.config.render_mode == 'none'
+                else ''
+            ),
         )
         import omni.usd
         from isaacsim.core.api import World
@@ -219,7 +230,8 @@ class IsaacSimSimulator(EpisodeSimulator):
         self._indices = np.array([self._robot.get_dof_index(name) for name in names])
         if len(set(self._indices)) != len(names):
             raise ValueError('Selected joints must have distinct articulation indices')
-        self._limits = np.asarray(self._robot.get_dof_limits()).reshape(-1, 2)[self._indices]
+        properties = self._robot.dof_properties
+        self._limits = np.column_stack((properties['lower'], properties['upper']))[self._indices]
         self._velocity_slots = np.array(
             [i for i, name in enumerate(names) if name in self.config.velocity_joint_names],
             dtype=int,
@@ -262,7 +274,7 @@ class IsaacSimSimulator(EpisodeSimulator):
             }
         )
         efforts = np.array([force_by_name[name] for name in names])
-        self._robot.set_max_efforts(efforts, joint_indices=self._indices)
+        controller.set_max_efforts(efforts, joint_indices=self._indices)
         controller.switch_control_mode('position')
         for index in self._indices[self._velocity_slots]:
             controller.switch_dof_control_mode(dof_index=int(index), mode='velocity')
@@ -506,12 +518,36 @@ class IsaacSimSimulator(EpisodeSimulator):
                     self._world.clear_instance()
         finally:
             try:
+                self._world = self._robot = self._camera = self._cube = self._stage = None
+                self._fingers = []
                 if self._app is not None:
+                    gc.collect()
+                    if sys.platform == 'linux':
+                        import carb
+
+                        mapped_paths = {
+                            fields[5]
+                            for line in Path('/proc/self/maps').read_text().splitlines()
+                            if len(fields := line.split(maxsplit=5)) == 6
+                        }
+                        # Kit unloads providers before Python and C++ finalizers
+                        # release SDK-owned objects. Keep their code mapped until
+                        # normal process exit; app.close() still shuts them down.
+                        for plugin in carb.get_framework().get_plugins():
+                            if (
+                                plugin.libPath
+                                and str(Path(plugin.libPath).resolve()) in mapped_paths
+                            ):
+                                ctypes.CDLL(
+                                    plugin.libPath,
+                                    mode=os.RTLD_NOW
+                                    | os.RTLD_LOCAL
+                                    | os.RTLD_NOLOAD
+                                    | os.RTLD_NODELETE,
+                                )
                     app, self._app = self._app, None
                     app.close()
             finally:
-                self._world = self._robot = self._camera = self._cube = None
-                self._fingers = []
                 if self._assets is not None:
                     self._assets.cleanup()
                     self._assets = None

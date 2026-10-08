@@ -1,0 +1,22 @@
+[package]
+title = "usim native headless physics"
+version = "0.1.0"
+
+[dependencies]
+"omni.isaac.ml_archive" = { order = -100 }
+"omni.kit.renderer.core" = {}
+"isaacsim.core.api" = {}
+"isaacsim.asset.importer.urdf" = {}
+"omni.kit.loop-isaac" = {}
+
+[settings]
+app.settings.persistent = false
+app.file.ignoreUnsavedStage = true
+app.player.useFixedTimeStepping = false
+app.runLoops.main.manualModeEnabled = true
+app.runLoops.main.rateLimitEnabled = false
+app.exts.folders = [
+    "${exe-path}/../exts",
+    "${exe-path}/../extscache",
+    "${exe-path}/../extsDeprecated",
+]
