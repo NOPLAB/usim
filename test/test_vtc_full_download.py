@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
+from usim_env_pipeline import acquire
 
 SCRIPT = Path(__file__).parents[1] / 'src' / 'usim_env_vtc' / 'download.py'
 SPEC = importlib.util.spec_from_file_location('vtc_full_download', SCRIPT)
@@ -59,7 +60,7 @@ def original(monkeypatch):
         'sha256': hashlib.sha256(payload).hexdigest(),
     }
     monkeypatch.setattr(download, 'ASSETS', {'2018': asset})
-    monkeypatch.setattr(download, 'CHUNK_BYTES', 7)
+    monkeypatch.setattr(acquire, 'CHUNK_BYTES', 7)
     return payload, asset
 
 
@@ -99,22 +100,27 @@ def test_confirmation_stream_verified_before_atomic_publish(tmp_path, monkeypatc
     binary = Response(payload, length=len(payload))
     opener = mock_http(monkeypatch, page, binary)
     destination = tmp_path / asset['name']
-    replace = download.os.replace
+    replace = acquire.os.replace
     published = []
 
     def publish(source, target):
         assert not destination.exists()
         assert source.parent == tmp_path
+        if target != destination:
+            replace(source, target)
+            return
         assert source.read_bytes() == payload
-        download.verify_file(source, asset)
+        acquire.verify_file(source, asset['bytes'], asset['sha256'])
         published.append(target)
         replace(source, target)
 
-    monkeypatch.setattr(download.os, 'replace', publish)
+    monkeypatch.setattr(acquire.os, 'replace', publish)
     record = download.download('2018', tmp_path)
 
     assert destination.read_bytes() == payload
-    assert list(tmp_path.iterdir()) == [destination]
+    receipt = destination.with_name(destination.name + '.acquisition.json')
+    assert set(tmp_path.iterdir()) == {destination, receipt}
+    assert json.loads(receipt.read_text()) == record
     assert published == [destination]
     assert binary.read_sizes == [7] * (len(payload) // 7 + 2)
     assert page.closed and binary.closed
@@ -147,6 +153,19 @@ def test_cached_original_is_verified_without_network_or_rewrite(tmp_path, monkey
     assert destination.stat().st_mtime_ns == before.st_mtime_ns
     assert destination.stat().st_ino == before.st_ino
     opener.open.assert_not_called()
+
+
+def test_replaced_asset_id_controls_download_and_provenance(tmp_path, monkeypatch, original):
+    payload, asset = original
+    asset['id'] = 'offline-source-id'
+    opener = mock_http(monkeypatch, Response(payload, length=len(payload)))
+
+    record = download.download('2018', tmp_path)
+
+    assert parse_qs(urlsplit(opener.open.call_args.args[0]).query)['id'] == [asset['id']]
+    assert urlsplit(record['official_source']).path == f'/file/d/{asset["id"]}/view'
+    assert record['sha256'] == asset['sha256']
+    assert record['bytes'] == len(payload)
 
 
 def test_corrupt_cache_is_preserved_and_rejected(tmp_path, monkeypatch, original):

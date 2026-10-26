@@ -30,6 +30,10 @@ For the full old-course, source-preserving public point-cloud map, see
 [full Tsukuba map and source licenses](docs/vtc/tsukuba-full-map/README.md).
 Its tooling belongs to `usim`; the downloaded and generated map data is
 CC BY-NC-SA 4.0, not covered by the software's MIT license.
+For arbitrary PCD/PLY input, use the shared
+[point-cloud map pipeline](docs/env-pipeline.md); VTC reconstruction uses the same engine.
+The [common environment API/CLI](docs/env.md) supports VTC and
+[Tsudanuma CIT](docs/tsudanuma.md) through dataset-specific adapters.
 
 ## Run a robot
 
@@ -111,6 +115,10 @@ application ROS interfaces.
 
 - `src/usim/`: pure contracts, factory, CLI, bridges and robot descriptions.
 - `src/usim/bridges/`: optional standard ROS I/O.
+- `src/usim_env_pipeline/`: optional CPU point-cloud archival/reconstruction/USD pipeline.
+- `src/usim_env/`: common download/generate contracts and lazy dataset CLI.
+- `src/usim_env_vtc/`: VTC acquisition, source-policy adapter and map-specific processing.
+- `src/usim_env_tsudanuma/`: Tsudanuma CIT acquisition, provenance and frame policy.
 - `packages/{genesis,isaacsim,maniskill,gazebo}/`: independent engine distributions.
 - `src/usim/ports/`: lightweight public compatibility facades for existing mobile clients.
 - `examples/worlds/`: small owned SDF demonstration worlds.

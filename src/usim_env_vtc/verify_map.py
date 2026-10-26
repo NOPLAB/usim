@@ -17,7 +17,8 @@ if not __package__:
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     __package__ = 'usim_env_vtc'
-from .pcd import FIELDS, PUBLIC_HASHES, normals, open_records, sha256, xyz
+from .pcd import FIELDS, normals, open_records, sha256, xyz
+from .sources import LICENSE, PUBLIC_HASHES
 from pxr import Usd, UsdGeom, UsdPhysics
 from scipy.spatial import cKDTree
 
@@ -303,7 +304,7 @@ def verify(output: Path) -> dict[str, Any]:
             f'{filename}: frame metadata',
         )
         require(
-            stage.GetRootLayer().customLayerData.get('license') == 'CC-BY-NC-SA-4.0',
+            stage.GetRootLayer().customLayerData.get('license') == LICENSE,
             f'{filename}: license metadata',
         )
         if filename in ('streamed.usda', 'points.usda'):

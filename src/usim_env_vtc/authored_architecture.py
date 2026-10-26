@@ -190,49 +190,19 @@ def author_architecture(
             r.box('Capital', (0, 0, 0.96), (1, 1, 1))
         case 'desk':
             r.desk(reception=key == 'City_Hall_reception')
-        case 'chair':
-            r.box('Seat', (0, 0, 0.46), (1, 1, 0.55), 'seat')
-            r.box('Back', (0, 0.88, 0.55), (1, 1, 1), 'seat')
-            for index, (x, y) in enumerate(
-                ((0.08, 0.08), (0.84, 0.08), (0.08, 0.84), (0.84, 0.84))
-            ):
-                r.box(f'Leg_{index}', (x, y, 0), (x + 0.08, y + 0.08, 0.46), 'metal')
-        case 'table':
-            r.box('Tabletop', (0, 0, 0.92), (1, 1, 1), 'wood')
-            for index, (x, y) in enumerate(
-                ((0.06, 0.06), (0.86, 0.06), (0.06, 0.86), (0.86, 0.86))
-            ):
-                r.box(f'Leg_{index}', (x, y, 0), (x + 0.08, y + 0.08, 0.92), 'metal')
-        case 'roadcone':
-            r.box('Base', (0, 0, 0), (1, 1, 0.08), 'metal')
-            r.round('Cone', (0.08, 0.08, 0.08), (0.92, 0.92, 1), 'orange', cone=True)
-            r.round('Reflector', (0.235, 0.235, 0.40), (0.765, 0.765, 0.47), 'white')
-        case 'cube':
-            r.box('Cube', (0, 0, 0), (1, 1, 1))
-        case 'cone' | 'cylinder' | 'sphere' | 'rock':
-            r.round(
-                'Solid',
-                (0, 0, 0),
-                (1, 1, 1),
-                'rock' if category == 'rock' else 'stone',
-                cone=category == 'cone',
-                sphere=category == 'sphere',
-                rock=category == 'rock',
-            )
-        case 'plane':
-            r.mesh('Plane', [(0, 0, 0.5), (1, 0, 0.5), (1, 1, 0.5), (0, 1, 0.5)], [(0, 1, 2, 3)])
-        case 'pyramid':
-            r.mesh(
-                'Pyramid',
-                [(0, 0, 0), (1, 0, 0), (0.5, 1, 0), (0.5, 0.4, 1)],
-                [(2, 1, 0), (0, 1, 3), (1, 2, 3), (2, 0, 3)],
-            )
-        case 'mannequin':
-            r.round('Head', (0.40, 0.1, 0.84), (0.60, 0.9, 1), 'seat', sphere=True)
-            r.box('Torso', (0.30, 0.1, 0.46), (0.70, 0.9, 0.84), 'seat')
-            for index, (a, b) in enumerate(((0, 0.3), (0.7, 1))):
-                r.box(f'Arm_{index}', (a, 0.3, 0.65), (b, 0.7, 0.77), 'metal')
-            for index, (a, b) in enumerate(((0.32, 0.46), (0.54, 0.68))):
-                r.box(f'Leg_{index}', (a, 0.2, 0), (b, 0.8, 0.46), 'metal')
+        case (
+            'chair'
+            | 'table'
+            | 'roadcone'
+            | 'cube'
+            | 'cone'
+            | 'cylinder'
+            | 'sphere'
+            | 'rock'
+            | 'plane'
+            | 'pyramid'
+            | 'mannequin'
+        ):
+            r.prop(category)
         case unreachable:
             assert_never(unreachable)

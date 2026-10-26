@@ -15,12 +15,13 @@ if not __package__:
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     __package__ = 'usim_env_vtc'
+from usim_env_pipeline.buildings import author_building, building_dimensions
+from usim_env_pipeline.trees import author_tree
+
 from .authored_architecture import author_architecture
-from .authored_buildings import author_building, building_dimensions
 from .authored_map_geometry import retain_bsp, retain_posts
 from .authored_notice import write_notice
 from .authored_terrain import TerrainEntry, author_tile
-from .authored_trees import author_tree
 
 
 class ModelInfo(TypedDict):

@@ -8,7 +8,7 @@ import sys
 
 pytest.importorskip('scipy')
 
-from usim_env_vtc.vegetation import infer_trees
+from usim_env_pipeline.features import infer_trees
 
 
 def crown(center):
@@ -65,6 +65,18 @@ def test_vertical_facade_does_not_become_a_canopy():
     assert trees == []
 
 
+def test_recessed_facade_does_not_become_a_canopy():
+    # Given facade bays and recessed windows, not one perfectly flat wall.
+    along, z = np.meshgrid(np.arange(-3, 4, 0.1), np.arange(0, 10, 0.1))
+    depth = np.where((np.floor(along) + np.floor(z)) % 2 == 0, -1.0, 1.0)
+    wall = np.column_stack((along.ravel(), depth.ravel(), z.ravel()))
+    points = np.concatenate((ground(), wall)).astype(np.float64)
+    # When detecting supported crowns.
+    trees = infer_trees(points)
+    # Then architectural depth is not mistaken for one volumetric tree.
+    assert trees == []
+
+
 def test_authored_negative_coordinate_tree_is_grounded_and_source_is_preserved(
     tmp_path,
     monkeypatch,
@@ -73,6 +85,7 @@ def test_authored_negative_coordinate_tree_is_grounded_and_source_is_preserved(
     from PIL import Image
     from pxr import Usd, UsdGeom
     from usim_env_vtc import vegetation
+    from usim_env_vtc import sources
     from usim_env_vtc.pcd import DTYPE, FIELDS
 
     # Given a real PCD crown, a centered prototype, and negative VTC X coordinates.
@@ -92,7 +105,7 @@ def test_authored_negative_coordinate_tree_is_grounded_and_source_is_preserved(
     ).encode('ascii')
     source.write_bytes(header + records.tobytes())
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
-    monkeypatch.setitem(vegetation.PUBLIC_HASHES, 'map_tc19_o085_f-04_t05.pcd', digest)
+    monkeypatch.setitem(sources.PUBLIC_HASHES, 'map_tc19_o085_f-04_t05.pcd', digest)
     registration = tmp_path / 'registration.json'
     registration.write_text(
         json.dumps(

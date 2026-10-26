@@ -100,6 +100,12 @@ reference PCD; they are not claimed as aligned or rendered in the 2019 world.
 
 ## Generate and verify
 
+Reconstruction uses the shared [`usim_env_pipeline`](../../env-pipeline.md).
+The VTC adapter supplies official provenance and requires supplied normals;
+its filenames, source-record IDs and independent verification contract are unchanged.
+For a checkout-managed CPU environment, use
+`uv run --extra pipeline python -m usim_env_vtc.reconstruct` with the arguments below.
+
 Run from the **usim checkout root**. The examples use PowerShell; on Linux,
 use `bin/python` instead of `Scripts/python.exe`.
 

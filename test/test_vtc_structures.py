@@ -5,8 +5,8 @@ import pytest
 
 pytest.importorskip('scipy')
 
-from usim_env_vtc.structures import Post, author_posts, infer_posts
-from usim_env_vtc.vegetation import Tree, relative_heights
+from usim_env_pipeline.features import Post, Tree, infer_posts, relative_heights
+from usim_env_pipeline.structures import author_posts
 
 
 def column_points(center):
