@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from array import array
 
 from usim.simulation import CommandGate, RobotState, Ros2Config, Velocity
 
@@ -13,6 +14,10 @@ def Bridge(
     configuration: Ros2Config | None = None,
     base_link: str = 'base_link',
     optical_frame: str = 'camera_link',
+    lidar_enabled: bool = False,
+    lidar_frame: str = 'lidar_link',
+    lidar_offset: tuple[float, float, float] = (0.0, 0.0, 0.3),
+    lidar_points: bool = False,
 ):
     """Create a ROS node at the execution boundary, leaving module imports portable."""
     configuration = configuration if configuration is not None else Ros2Config()
@@ -23,7 +28,7 @@ def Bridge(
     from rclpy.qos import QoSProfile, ReliabilityPolicy
     from rclpy.time import Time
     from rosgraph_msgs.msg import Clock
-    from sensor_msgs.msg import Image
+    from sensor_msgs.msg import Image, LaserScan, PointCloud2, PointField
     from std_srvs.srv import SetBool
     from tf2_msgs.msg import TFMessage
 
@@ -39,6 +44,15 @@ def Bridge(
             qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
             self.image_pub = None
             self.depth_pub = None
+            self.scan_pub = None
+            self.points_pub = None
+            if lidar_enabled:
+                if lidar_points:
+                    self.points_pub = self.create_publisher(
+                        PointCloud2, configuration.points_topic, qos
+                    )
+                else:
+                    self.scan_pub = self.create_publisher(LaserScan, configuration.scan_topic, qos)
             if camera_enabled:
                 self.image_pub = self.create_publisher(Image, configuration.rgb_topic, qos)
                 self.depth_pub = self.create_publisher(Image, configuration.depth_topic, qos)
@@ -109,6 +123,65 @@ def Bridge(
             self.tf_pub.publish(TFMessage(transforms=[transform]))
             return stamp
 
+        def publish_scan(
+            self, stamp, ranges, *, angle_min, angle_max, range_min, range_max, scan_time
+        ):
+            """Publish an instantaneous physical scan and its matching body-fixed frame."""
+            scan = LaserScan()
+            scan.header.stamp = stamp
+            scan.header.frame_id = lidar_frame
+            scan.angle_min, scan.angle_max = float(angle_min), float(angle_max)
+            scan.angle_increment = float((angle_max - angle_min) / (len(ranges) - 1))
+            scan.time_increment = 0.0
+            scan.scan_time = float(scan_time)
+            scan.range_min, scan.range_max = float(range_min), float(range_max)
+            scan.ranges = [float(value) for value in ranges]
+            assert self.scan_pub is not None
+            self.publish_lidar_transform(stamp)
+            self.scan_pub.publish(scan)
+            return scan
+
+        def publish_points(self, stamp, points):
+            """Encode finite physical sensor-frame XYZ returns without ROS helper packages."""
+            xyz = np.asarray(points, dtype='<f4').reshape(-1, 3)
+            xyz = xyz[np.isfinite(xyz).all(axis=1)]
+            cloud = PointCloud2()
+            cloud.header.stamp = stamp
+            cloud.header.frame_id = lidar_frame
+            cloud.height, cloud.width = 1, len(xyz)
+            cloud.fields = [
+                PointField(name=name, offset=index * 4, datatype=PointField.FLOAT32, count=1)
+                for index, name in enumerate(('x', 'y', 'z'))
+            ]
+            cloud.is_bigendian = False
+            cloud.point_step = 12
+            cloud.row_step = cloud.width * cloud.point_step
+            cloud.is_dense = True
+            cloud.data = xyz.tobytes()
+            assert self.points_pub is not None
+            self.publish_lidar_transform(stamp)
+            self.points_pub.publish(cloud)
+            return cloud
+
+        def publish_lidar_transform(self, stamp):
+            """Publish the sensor's physical mounting transform before its observation."""
+            if not configuration.publish_lidar_tf:
+                return
+            transform = TransformStamped()
+            transform.header.stamp = stamp
+            transform.header.frame_id = base_link
+            transform.child_frame_id = lidar_frame
+            (
+                transform.transform.translation.x,
+                transform.transform.translation.y,
+                transform.transform.translation.z,
+            ) = lidar_offset
+            transform.transform.rotation.x = 0.0
+            transform.transform.rotation.y = 0.0
+            transform.transform.rotation.z = 0.0
+            transform.transform.rotation.w = 1.0
+            self.tf_pub.publish(TFMessage(transforms=[transform]))
+
         def publish_color(self, stamp, rgba):
             image = Image()
             image.header.stamp = stamp
@@ -116,7 +189,7 @@ def Bridge(
             image.height, image.width = rgba.shape[:2]
             image.encoding = 'rgb8'
             image.step = image.width * 3
-            image.data = rgba[:, :, :3].astype('uint8').tobytes()
+            image.data = array('B', rgba[:, :, :3].astype('uint8').tobytes())
             self.image_pub.publish(image)
             return image
 
@@ -126,7 +199,7 @@ def Bridge(
             depth_image.height, depth_image.width = depth.shape[:2]
             depth_image.encoding = '32FC1'
             depth_image.step = depth_image.width * 4
-            depth_image.data = np.asarray(depth, dtype='<f4').tobytes()
+            depth_image.data = array('B', np.asarray(depth, dtype='<f4').tobytes())
             self.depth_pub.publish(depth_image)
 
     return Bridge()

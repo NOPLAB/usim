@@ -9,6 +9,43 @@ from usim.ports.isaac.cli import configured
 
 
 class CliTest(unittest.TestCase):
+    def test_mobile_navigation_options_reach_shared_configuration(self):
+        args = build_parser().parse_args(
+            [
+                'simulate',
+                '--world',
+                'room.usd',
+                '--robot-urdf',
+                'robot.urdf',
+                '--initial-position',
+                '300',
+                '-190',
+                '0.2',
+                '--initial-yaw',
+                '1.5',
+                '--real-time',
+                '--physics-only',
+                '--lidar-enabled',
+                '--lidar-offset',
+                '0.144',
+                '0',
+                '0.105',
+                '--lidar-samples',
+                '720',
+                '--scan-topic',
+                '/scan_raw',
+            ]
+        )
+        config = configured(args)
+        self.assertEqual(config.initial_position, (300.0, -190.0, 0.2))
+        self.assertEqual(config.initial_yaw, 1.5)
+        self.assertTrue(config.real_time and config.lidar_enabled)
+        self.assertFalse(config.camera_enabled)
+        self.assertEqual(config.lidar_offset, (0.144, 0.0, 0.105))
+        self.assertEqual(config.lidar_samples, 720)
+        self.assertIsNotNone(config.ros)
+        self.assertEqual(config.ros.scan_topic, '/scan_raw')
+
     def test_wheel_groups_override_singular_flags(self):
         args = build_parser().parse_args(
             [

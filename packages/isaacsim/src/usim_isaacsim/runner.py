@@ -36,9 +36,13 @@ def run(
                 'camera_prim_path',
                 'ground_name',
                 'optical_frame',
+                'lidar_frame',
+                'residency_radius',
+                'preview_hz',
             )
         }
         options['contact_out'] = str(port.contact_out.resolve()) if port.contact_out else None
+        options['world_index'] = str(port.world_index.resolve()) if port.world_index else None
         path = directory / 'configuration.json'
         stop_file = directory / 'stop'
         path.write_text(
@@ -143,6 +147,8 @@ def main() -> None:
     options = data['port']
     if options['contact_out'] is not None:
         options['contact_out'] = Path(options['contact_out'])
+    if options.get('world_index') is not None:
+        options['world_index'] = Path(options['world_index'])
     stop = threading.Event()
     stop_file = Path(data['stop_file'])
 

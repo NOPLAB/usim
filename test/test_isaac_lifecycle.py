@@ -44,16 +44,22 @@ def test_worker_result_required_and_owned_files_removed(tmp_path, output, passes
         configurations.append(Path(command[-1]))
         data = json.loads(configurations[-1].read_text())
         assert data['configuration']['world'] == str(world.resolve())
+        assert data['port']['world_index'] == str((tmp_path / 'index.json').resolve())
+        assert data['port']['residency_radius'] == 65.0
+        assert data['port']['preview_hz'] == 5.0
         assert Path(data['stop_file']).parent == configurations[-1].parent
         assert kwargs['stdin'] is subprocess.DEVNULL
         return process
 
     with patch('usim_isaacsim.runner.subprocess.Popen', side_effect=launch):
+        index = tmp_path / 'index.json'
+        index.write_text('[]')
+        port = IsaacSimulator(world_index=index, residency_radius=65.0, preview_hz=5.0)
         if passes:
-            IsaacSimulator().run(SimulationConfig(world, robot))
+            port.run(SimulationConfig(world, robot))
         else:
             with pytest.raises(RuntimeError, match='Isaac worker failed'):
-                IsaacSimulator().run(SimulationConfig(world, robot))
+                port.run(SimulationConfig(world, robot))
     assert len(configurations) == 1
     assert not configurations[0].parent.exists()
     assert process.stdout.closed
@@ -134,6 +140,12 @@ def test_worker_deserializes_wheel_groups_as_tuples(tmp_path):
         tmp_path / 'robot.urdf',
         left_joints=('lf', 'lr'),
         right_joints=('rf', 'rr'),
+        initial_position=(300.0, -190.0, 0.2),
+        initial_yaw=1.5,
+        real_time=True,
+        lidar_enabled=True,
+        lidar_offset=(0.144, 0.0, 0.105),
+        lidar_vertical_angles=(0.0, 0.2, 0.4),
         ros=None,
     )
     fields = asdict(config)
@@ -143,7 +155,12 @@ def test_worker_deserializes_wheel_groups_as_tuples(tmp_path):
         json.dumps(
             {
                 'configuration': fields,
-                'port': {'contact_out': None},
+                'port': {
+                    'contact_out': None,
+                    'world_index': str(tmp_path / 'index.json'),
+                    'residency_radius': 65.0,
+                    'preview_hz': 5.0,
+                },
                 'stop_file': str(tmp_path / 'stop'),
                 'asset_directory': str(tmp_path),
             }
@@ -156,6 +173,10 @@ def test_worker_deserializes_wheel_groups_as_tuples(tmp_path):
     ):
         main()
     restored = execute.call_args.args[0]
+    port = execute.call_args.args[1]
+    assert port.world_index == tmp_path / 'index.json'
+    assert port.residency_radius == 65.0
+    assert port.preview_hz == 5.0
     assert restored == config
     assert isinstance(restored.left_joints, tuple)
     assert isinstance(restored.right_joints, tuple)

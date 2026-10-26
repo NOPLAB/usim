@@ -17,6 +17,38 @@ from usim.simulation import (
 
 
 class SimulationTest(unittest.TestCase):
+    def test_navigation_fields_validate_and_roundtrip_json_lists(self):
+        config = SimulationConfig(
+            Path('world'),
+            Path('robot'),
+            initial_position=[300.0, -190.0, 0.2],
+            lidar_offset=[0.144, 0.0, 0.105],
+            lidar_vertical_angles=(0.0, math.pi / 9),
+            real_time=True,
+        )
+        self.assertEqual(config.initial_position, (300.0, -190.0, 0.2))
+        self.assertEqual(config.lidar_offset, (0.144, 0.0, 0.105))
+        self.assertEqual(config.lidar_vertical_angles, (0.0, math.pi / 9))
+        self.assertIsNone(SimulationConfig(Path('world'), Path('robot')).lidar_vertical_angles)
+        for change in (
+            dict(initial_position=(1, 2)),
+            dict(initial_yaw=math.inf),
+            dict(lidar_offset=(0, math.nan, 0)),
+            dict(lidar_samples=1),
+            dict(lidar_samples=3.5),
+            dict(lidar_hz=0),
+            dict(lidar_angle_min=1, lidar_angle_max=0),
+            dict(lidar_min_range=-1),
+            dict(lidar_min_range=30, lidar_max_range=30),
+            dict(lidar_vertical_angles=[]),
+            dict(lidar_vertical_angles='bad'),
+            dict(lidar_vertical_angles=(math.nan,)),
+            dict(lidar_vertical_angles=(math.inf,)),
+            dict(lidar_vertical_angles=(math.pi,)),
+        ):
+            with self.subTest(change=change), self.assertRaises(ConfigurationError):
+                replace(config, **change)
+
     def test_wheel_groups_preserve_singular_defaults_and_roundtrip(self):
         config = SimulationConfig(Path('world'), Path('robot'))
         self.assertEqual(config.left_wheel_joints, ('left_wheel_joint',))
@@ -85,3 +117,5 @@ class SimulationTest(unittest.TestCase):
             SimulationConfig(Path('world'), Path('robot'), max_seconds=-1.0)
         with self.assertRaises(ConfigurationError):
             Ros2Config(odom_topic='')
+        with self.assertRaises(ConfigurationError):
+            Ros2Config(points_topic=' ')

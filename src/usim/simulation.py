@@ -30,6 +30,9 @@ class Ros2Config:
     rgb_topic: str = '/camera/color/image_raw'
     depth_topic: str = '/camera/depth/image_raw'
     motor_service: str = '/motor_power'
+    scan_topic: str = '/scan_raw'
+    publish_lidar_tf: bool = True
+    points_topic: str = '/lidar/points'
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -39,6 +42,8 @@ class Ros2Config:
             ('rgb_topic', self.rgb_topic),
             ('depth_topic', self.depth_topic),
             ('motor_service', self.motor_service),
+            ('scan_topic', self.scan_topic),
+            ('points_topic', self.points_topic),
         ):
             if not value.strip():
                 raise ConfigurationError(name)
@@ -66,17 +71,69 @@ class SimulationConfig:
     ros: Ros2Config | None = field(default_factory=Ros2Config)
     left_joints: tuple[str, ...] | None = None
     right_joints: tuple[str, ...] | None = None
+    initial_position: tuple[float, float, float] | None = None
+    initial_yaw: float = 0.0
+    real_time: bool = False
+    lidar_enabled: bool = False
+    lidar_offset: tuple[float, float, float] = (0.0, 0.0, 0.3)
+    lidar_hz: float = 10.0
+    lidar_samples: int = 360
+    lidar_angle_min: float = -math.pi
+    lidar_angle_max: float = math.pi
+    lidar_min_range: float = 0.05
+    lidar_max_range: float = 30.0
+    lidar_vertical_angles: tuple[float, ...] | None = None
 
     def __post_init__(self) -> None:
         for name, value in (
             ('wheel_radius', self.wheel_radius),
             ('wheel_separation', self.wheel_separation),
             ('camera_hz', self.camera_hz),
+            ('lidar_hz', self.lidar_hz),
+            ('lidar_max_range', self.lidar_max_range),
         ):
             if not math.isfinite(value) or value <= 0:
                 raise ConfigurationError(name)
         if not math.isfinite(self.max_seconds) or self.max_seconds < 0:
             raise ConfigurationError('max_seconds')
+        if not math.isfinite(self.initial_yaw):
+            raise ConfigurationError('initial_yaw')
+        for name in ('initial_position', 'lidar_offset'):
+            value = getattr(self, name)
+            if value is None and name == 'initial_position':
+                continue
+            if (
+                value is None
+                or len(value) != 3
+                or any(not math.isfinite(component) for component in value)
+            ):
+                raise ConfigurationError(name)
+            object.__setattr__(self, name, tuple(value))
+        if not isinstance(self.lidar_samples, int) or self.lidar_samples < 2:
+            raise ConfigurationError('lidar_samples')
+        if self.lidar_vertical_angles is not None:
+            if (
+                not isinstance(self.lidar_vertical_angles, (tuple, list))
+                or not self.lidar_vertical_angles
+                or any(
+                    not math.isfinite(angle) or abs(angle) > math.pi / 2
+                    for angle in self.lidar_vertical_angles
+                )
+            ):
+                raise ConfigurationError('lidar_vertical_angles')
+            object.__setattr__(self, 'lidar_vertical_angles', tuple(self.lidar_vertical_angles))
+        if (
+            not math.isfinite(self.lidar_angle_min)
+            or not math.isfinite(self.lidar_angle_max)
+            or self.lidar_angle_min >= self.lidar_angle_max
+        ):
+            raise ConfigurationError('lidar angles')
+        if (
+            not math.isfinite(self.lidar_min_range)
+            or self.lidar_min_range < 0
+            or self.lidar_min_range >= self.lidar_max_range
+        ):
+            raise ConfigurationError('lidar_min_range')
         if self.camera_width < 1 or self.camera_height < 1:
             raise ConfigurationError('camera dimensions')
         if len(self.camera_offset) != 3 or any(

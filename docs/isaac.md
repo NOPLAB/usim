@@ -104,6 +104,30 @@ IsaacSimulator().run(
 
 ## Worker process
 
+### Indexed world residency
+
+For a large static world, construct
+`IsaacSimulator(world_index=Path('assets/world-index.json'), residency_radius=60.0)`.
+The JSON index is a list of `{"path": "/World/...", "min": [x, y, z],
+"max": [x, y, z]}` entries for independently activatable payload roots. Bounds
+remain in the original metre-scale world coordinates; `/World` in each path maps
+to `environment_prim_path`. Supply a Z-up USD wrapper that sublayers the complete
+original world, retains its default prim and original asset references, and authors
+every indexed payload inactive. This avoids an eager full-world load when the
+wrapper is referenced. Do not nest indexed payload roots under another inactive
+indexed root.
+
+Before physics reset, the worker activates and loads payloads intersecting the
+spawn's XY neighborhood. Between physics steps it updates after 5 metres of travel
+(less for small radii), retaining existing payloads for an additional 10 metres
+to avoid boundary churn. Only activation changes; source geometry, materials and
+collision remain intact, and LiDAR still queries the live PhysX scene. No live
+`Unload` is used. Choose a radius exceeding the sensor range plus the movement
+threshold, and enough ahead of the robot for native collision cooking. Native
+runtime validation is still required for a particular world's collider cooking
+and GPU budget. A visible viewport follows the robot in this mode. Omitting
+`world_index` preserves the ordinary eager world and fixed spawn view.
+
 `IsaacSimulator.run` doesn't load the SDK in the calling process. It writes
 `configuration.json` into a private temporary directory, starts
 `python -u -m usim.ports.isaac.runner <configuration.json>` with the port's
@@ -145,10 +169,90 @@ On Linux, add the SDK's
 starting Python. Windows retains an explicit DLL-directory handle.
 
 `--no-ros` omits application ROS imports; `--physics-only` omits the camera.
-Only steps whose camera frame is read (at `camera_hz`) are rendered; reading after
-unread rendered frames hit recycled buffers (CUDA error 700) in Isaac 6.1.
+Visible mode renders every step, including `--physics-only`, adds a dome light
+when the world has no lights, and points the viewport at the robot spawn.
+Headless mode renders only camera captures. Every rendered camera frame is read
+before another render; publishing remains limited by `camera_hz`. Reading after
+unread rendered frames hits recycled buffers (CUDA error 700) in Isaac 6.1.
 `--headless` requests native headless mode. Kit rendering is platform-dependent;
 if its renderer fails to advance, use a visible window or Xvfb on Linux.
+
+Optional `SimulationConfig` fields `initial_position=(x, y, z)` and
+`initial_yaw` (radians) place the articulation root before reset. Omission
+preserves the imported pose. `real_time=True` limits physics advancement to wall
+time, with cancellable waits; slow frames do not skip physics steps.
+The CLI equivalents are `--initial-position X Y Z --initial-yaw R --real-time`.
+
+`lidar_enabled=True` enables instantaneous planar rays against live PhysX
+colliders, not a map approximation. `lidar_offset` is a physical translation in
+the reported body's frame; rays follow its full orientation. The defaults are
+360 samples from `-pi` to `pi`, 10 Hz of simulation time, and ranges 0.05 to
+30 metres. Configure `lidar_samples`, `lidar_angle_min`, `lidar_angle_max`,
+`lidar_hz`, `lidar_min_range`, and `lidar_max_range` in `SimulationConfig`.
+Self hits are excluded; the nearest external hit is selected, with infinity for
+missing or too-close returns. `Ros2Config(scan_topic='/scan_raw')` selects the
+topic, and `IsaacSimulator(lidar_frame='lidar_link')` selects the frame.
+The ROS bridge publishes the matching body-to-LiDAR transform with each scan.
+When robot_state_publisher owns the sensor chain, set
+`Ros2Config(publish_lidar_tf=False)` to avoid giving `lidar_link` a second parent.
+Scans use sensor-data best-effort QoS.
+
+Set `SimulationConfig.lidar_vertical_angles` to a nonempty tuple of elevation
+angles in radians (each between `-pi/2` and `pi/2`) to select physical 3D point
+mode. Its default `None` preserves planar scans. Each elevation casts
+`lidar_samples` azimuth rays at `lidar_hz`; all rays and the mounting offset
+follow the body's full orientation. Only finite, in-range nearest external
+PhysX hits become sensor-frame XYZ points, including terrain returns. Nothing
+is ground-masked or substituted from a map.
+
+Point mode publishes `sensor_msgs/PointCloud2` on
+`Ros2Config(points_topic='/lidar/points')`, using XYZ float32 little-endian
+fields and sensor-data best-effort QoS. It does not create a LaserScan
+publisher, leaving downstream point-cloud filtering and scan conversion in
+control of `/scan_raw`. The matching sensor transform is published before each
+cloud unless `publish_lidar_tf=False`.
+
+For example, an independently named sensor frame can feed a downstream
+elevation-filter/pointcloud-to-laserscan pipeline:
+
+```python
+import math
+from usim.simulation import Ros2Config
+
+configuration = SimulationConfig(
+    world=Path('assets/local-world.usd'),
+    robot_urdf=Path('assets/mobile.urdf'),
+    lidar_enabled=True,
+    lidar_vertical_angles=(0.0, math.radians(10), math.radians(20)),
+    lidar_samples=360,
+    lidar_offset=(0.144, 0.0, 0.275),
+    ros=Ros2Config(points_topic='/livox/lidar', publish_lidar_tf=True),
+)
+IsaacSimulator(lidar_frame='sim_mid360_link').run(configuration)
+```
+
+```python
+IsaacSimulator().run(
+    SimulationConfig(
+        world=Path('assets/local-world.usd'),
+        robot_urdf=Path('assets/raspicat.urdf'),
+        base_link='base_footprint',
+        wheel_radius=0.0762,
+        wheel_separation=0.27918,
+        initial_position=(300.0, -190.0, 0.2),
+        initial_yaw=0.0,
+        real_time=True,
+        camera_enabled=False,
+        lidar_enabled=True,
+        lidar_offset=(0.144, 0.0, 0.105),
+    )
+)
+```
+
+The spawn height and LiDAR offset must match the imported articulation root,
+which may change when fixed URDF joints merge. The CLI exposes
+`--lidar-enabled --lidar-offset X Y Z --lidar-hz HZ --lidar-samples N --scan-topic TOPIC`;
+the older `--lidar-link` options still configure Gazebo only.
 
 ```sh
 uv run --python 3.12 --extra isaac python scripts/smoke_mobile.py \

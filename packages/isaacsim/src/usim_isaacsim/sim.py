@@ -28,6 +28,80 @@ def _load_ros_python() -> None:
     load_ros_python()
 
 
+def _lidar_ranges(query, position, orientation, args, robot_path, elevation=0.0):
+    """Cast instantaneous body-fixed rays against live PhysX collision geometry."""
+    import carb
+    import numpy as np
+
+    w, x, y, z = orientation
+    rotation = np.array(
+        [
+            [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+        ]
+    )
+    origin = carb.Float3(*map(float, np.asarray(position) + rotation @ args.lidar_offset))
+    ranges = []
+    for angle in np.linspace(args.lidar_angle_min, args.lidar_angle_max, args.lidar_samples):
+        nearest = math.inf
+
+        def report(hit):
+            nonlocal nearest
+            if any(
+                path == robot_path or path.startswith(robot_path + '/')
+                for path in (hit.collision, hit.rigid_body)
+            ):
+                return True
+            nearest = min(nearest, float(hit.distance))
+            return True
+
+        direction = rotation @ (
+            math.cos(elevation) * math.cos(angle),
+            math.cos(elevation) * math.sin(angle),
+            math.sin(elevation),
+        )
+        query.raycast_all(
+            origin, carb.Float3(*map(float, direction)), args.lidar_max_range, report
+        )
+        # A closer-than-minimum obstruction is invalid, not a farther visible surface.
+        ranges.append(
+            nearest if args.lidar_min_range <= nearest <= args.lidar_max_range else math.inf
+        )
+    return ranges
+
+
+def _lidar_points(query, position, orientation, args, robot_path):
+    """Return only real finite hits, expressed in the body-fixed sensor frame."""
+    import numpy as np
+
+    points = []
+    for elevation in args.lidar_vertical_angles:
+        ranges = _lidar_ranges(query, position, orientation, args, robot_path, elevation)
+        for angle, distance in zip(
+            np.linspace(args.lidar_angle_min, args.lidar_angle_max, args.lidar_samples), ranges
+        ):
+            if math.isfinite(distance):
+                points.append(
+                    (
+                        distance * math.cos(elevation) * math.cos(angle),
+                        distance * math.cos(elevation) * math.sin(angle),
+                        distance * math.sin(elevation),
+                    )
+                )
+    return np.asarray(points, dtype='<f4').reshape(-1, 3)
+
+
+def _pace(begin, elapsed, stop, max_seconds):
+    """Wait only for simulated time ahead of wall time, bounded by cancellation/deadline."""
+    target = begin + elapsed
+    if max_seconds:
+        target = min(target, begin + max_seconds)
+    remaining = target - time.monotonic()
+    if remaining > 0:
+        stop.wait(remaining)
+
+
 class IsaacSimulator:
     """Blocking Isaac lifecycle; engine-specific scene paths remain constructor options."""
 
@@ -39,7 +113,11 @@ class IsaacSimulator:
         camera_prim_path: str = '/World/Mobile_Camera',
         ground_name: str = 'Ground',
         contact_out: Path | None = None,
+        world_index: Path | None = None,
+        residency_radius: float = 60.0,
+        preview_hz: float = 30.0,
         optical_frame: str = 'camera_link',
+        lidar_frame: str = 'lidar_link',
         python: str = sys.executable,
     ):
         paths = (robot_prim_path, environment_prim_path, camera_prim_path)
@@ -57,7 +135,15 @@ class IsaacSimulator:
         self.camera_prim_path = camera_prim_path
         self.ground_name = ground_name
         self.contact_out = contact_out
+        if not math.isfinite(residency_radius) or residency_radius <= 0:
+            raise ValueError('residency_radius must be finite and positive')
+        self.world_index = world_index
+        self.residency_radius = residency_radius
+        if not math.isfinite(preview_hz) or preview_hz <= 0:
+            raise ValueError('preview_hz must be finite and positive')
+        self.preview_hz = preview_hz
         self.optical_frame = optical_frame
+        self.lidar_frame = lidar_frame
         self.python = python
 
     def run(self, configuration: SimulationConfig, *, stop: Event | None = None) -> None:
@@ -66,6 +152,8 @@ class IsaacSimulator:
         for path in (configuration.world, configuration.robot_urdf):
             if not path.is_file():
                 raise ValueError(f'missing asset: {path}')
+        if self.world_index is not None and not self.world_index.is_file():
+            raise ValueError(f'missing world index: {self.world_index}')
         from usim_isaacsim.runner import run
 
         run(configuration, self, stop=stop)
@@ -94,6 +182,7 @@ def _run(
     contacts_saved = False
     bridge = None
     ros_started = False
+    stop = stop if stop is not None else Event()
     app = SimulationApp(
         {
             'headless': args.headless,
@@ -109,7 +198,6 @@ def _run(
     try:
         import numpy as np
         import isaacsim.core.experimental.utils.app as app_utils
-        import omni.replicator.core as rep
         import omni.usd
         from isaacsim.asset.importer.urdf import URDFImporter, URDFImporterConfig
         from isaacsim.core.utils.extensions import enable_extension
@@ -118,12 +206,12 @@ def _run(
         if args.ros is not None:
             _load_ros_python()
             import rclpy
+            from builtin_interfaces.msg import Time
             from usim.bridges.ros2 import Bridge
         from isaacsim.core.api import World
         from isaacsim.core.prims import SingleArticulation
         from isaacsim.core.utils.stage import add_reference_to_stage
         from isaacsim.core.utils.types import ArticulationAction
-        from isaacsim.sensors.experimental.rtx import CameraSensor
         from pxr import Usd, UsdGeom, UsdPhysics
 
         robot_assets = tempfile.TemporaryDirectory(prefix='urdf-', dir=asset_directory)
@@ -151,6 +239,20 @@ def _run(
         stage = omni.usd.get_context().get_stage()
         robot_prim = stage.GetPrimAtPath(port.robot_prim_path)
         robot_prim.GetVariantSet('Physics').SetVariantSelection('physx')
+        residency = None
+        if port.world_index is not None:
+            from usim_isaacsim.world_residency import WorldResidency
+
+            stage.SetEditTarget(stage.GetSessionLayer())
+            residency = WorldResidency(
+                stage, port.world_index, port.environment_prim_path, port.residency_radius
+            )
+            initial_position = args.initial_position
+            if initial_position is None:
+                initial_position = (
+                    UsdGeom.XformCache().GetLocalToWorldTransform(robot_prim).ExtractTranslation()
+                )
+            residency.update(initial_position)
         stage.Load()
         if UsdGeom.GetStageUpAxis(stage) != UsdGeom.Tokens.z:
             raise RuntimeError('Isaac world must be Z-up')
@@ -186,9 +288,18 @@ def _run(
             drive.GetStiffnessAttr().Set(0.0)
             drive.GetDampingAttr().Set(10000.0)
             drive.GetMaxForceAttr().Set(1000.0)
+        spawn = {}
+        if args.initial_position is not None:
+            spawn['position'] = np.asarray(args.initial_position)
+        if args.initial_position is not None or args.initial_yaw:
+            spawn['orientation'] = np.array(
+                [math.cos(args.initial_yaw / 2), 0.0, 0.0, math.sin(args.initial_yaw / 2)]
+            )
         robot = world.scene.add(
             SingleArticulation(
-                prim_path=articulation_roots[0].GetPath().pathString, name=args.robot_name
+                prim_path=articulation_roots[0].GetPath().pathString,
+                name=args.robot_name,
+                **spawn,
             )
         )
         if port.contact_out is not None:
@@ -200,7 +311,10 @@ def _run(
                 child.GetName()
                 for child in environment.GetChildren()
                 if child.GetName() != port.ground_name
-                and any(prim.HasAPI(UsdPhysics.CollisionAPI) for prim in Usd.PrimRange(child))
+                and any(
+                    prim.HasAPI(UsdPhysics.CollisionAPI)
+                    for prim in Usd.PrimRange(child, Usd.TraverseInstanceProxies())
+                )
             }
             contact_log = ObstacleContactLog(
                 obstacles,
@@ -238,18 +352,38 @@ def _run(
                 get_physx_simulation_interface().subscribe_contact_report_events(on_contacts)
             )
         world.reset()
-        camera = None
-        camera_prim = None
-        if args.camera_enabled:
-            UsdGeom.Camera.Define(stage, port.camera_prim_path)
-            camera = CameraSensor(
-                port.camera_prim_path,
-                resolution=(args.camera_height, args.camera_width),
-                annotators=['rgb', 'distance_to_image_plane'],
+        set_camera_view = None
+        if not args.headless:
+            from isaacsim.core.utils.viewports import set_camera_view
+            from pxr import UsdLux
+
+            if not any(prim.HasAPI(UsdLux.LightAPI) for prim in stage.Traverse()):
+                light = UsdLux.DomeLight.Define(stage, '/World/UsimDefaultLight')
+                light.CreateIntensityAttr(1000.0)
+            spawn_position, _ = robot.get_world_pose()
+            set_camera_view(
+                eye=np.asarray(spawn_position) + np.array([4.0, -4.0, 3.0]),
+                target=np.asarray(spawn_position),
             )
-            camera_prim = camera.authoring_object
+        query = None
+        if args.lidar_enabled:
+            from omni.physx import get_physx_scene_query_interface
+
+            query = get_physx_scene_query_interface()
+        camera = None
+        if args.camera_enabled:
+            enable_extension('isaacsim.sensors.camera')
+            from isaacsim.sensors.camera import Camera
+
+            UsdGeom.Camera.Define(stage, port.camera_prim_path)
+            camera = Camera(
+                port.camera_prim_path,
+                resolution=(args.camera_width, args.camera_height),
+                annotator_device='cpu',
+            )
+            camera.initialize()
+            camera.add_distance_to_image_plane_to_frame()
             app_utils.play(commit=True)
-            rep.orchestrator.step(rt_subframes=2, pause_timeline=False)
         left = [robot.get_dof_index(name) for name in args.left_wheel_joints]
         right = [robot.get_dof_index(name) for name in args.right_wheel_joints]
         wheel_indices = left + right
@@ -266,10 +400,19 @@ def _run(
                 configuration=args.ros,
                 base_link=args.base_link,
                 optical_frame=port.optical_frame,
+                lidar_enabled=args.lidar_enabled,
+                lidar_frame=port.lidar_frame,
+                lidar_offset=args.lidar_offset,
+                lidar_points=args.lidar_vertical_angles is not None,
             )
         begin = time.monotonic()
+        simulation_begin = world.current_time
         print('USIM_ISAAC_RUNNING', flush=True)
         last_camera = 0.0
+        last_preview = -math.inf
+        last_completed_camera_time = -math.inf
+        last_scan = -math.inf
+        scan_frames = 0
         steps = 0
         camera_frames = 0
         empty_camera_frames = 0
@@ -281,6 +424,12 @@ def _run(
             and app.is_running()
             and (args.max_seconds == 0 or time.monotonic() - begin < args.max_seconds)
         ):
+            if args.real_time:
+                _pace(begin, world.current_time - simulation_begin, stop, args.max_seconds)
+                if stop.is_set() or (
+                    args.max_seconds and time.monotonic() - begin >= args.max_seconds
+                ):
+                    break
             if bridge is not None:
                 rclpy.spin_once(bridge, timeout_sec=0)
             motion = bridge.gate.sample() if bridge is not None else Velocity()
@@ -297,6 +446,13 @@ def _run(
                 )
             )
             previous_position, previous_orientation = robot.get_world_pose()
+            if residency is not None:
+                residency.update(previous_position)
+                if set_camera_view is not None:
+                    set_camera_view(
+                        eye=np.asarray(previous_position) + np.array([4.0, -4.0, 3.0]),
+                        target=np.asarray(previous_position),
+                    )
             previous_yaw = math.atan2(
                 2
                 * (
@@ -310,27 +466,36 @@ def _run(
                 camera_orientation = (
                     np.array([w - x + y + z, w + x - y + z, -w + x + y + z, -w - x - y + z]) * 0.5
                 )
-                camera_prim.set_world_poses(
-                    positions=np.asarray(
+                camera.set_world_pose(
+                    position=previous_position
+                    + np.array(
                         [
-                            previous_position
-                            + np.array(
-                                [
-                                    args.camera_offset[0] * math.cos(previous_yaw)
-                                    - args.camera_offset[1] * math.sin(previous_yaw),
-                                    args.camera_offset[0] * math.sin(previous_yaw)
-                                    + args.camera_offset[1] * math.cos(previous_yaw),
-                                    args.camera_offset[2],
-                                ]
-                            )
+                            args.camera_offset[0] * math.cos(previous_yaw)
+                            - args.camera_offset[1] * math.sin(previous_yaw),
+                            args.camera_offset[0] * math.sin(previous_yaw)
+                            + args.camera_offset[1] * math.cos(previous_yaw),
+                            args.camera_offset[2],
                         ]
                     ),
-                    orientations=np.asarray([camera_orientation]),
+                    orientation=camera_orientation,
+                    camera_axes='usd',
                 )
-            # Render only steps whose frame is read: buffers of unread rendered frames are
-            # recycled, and a later read faults with CUDA error 700.
-            capture = camera is not None and time.monotonic() - last_camera >= 1 / args.camera_hz
-            world.step(render=capture)
+            # Completed-image callbacks run during rendering. Copy their CPU snapshot
+            # on this Kit thread before another update can replace borrowed arrays.
+            render_time = time.monotonic()
+            publish_camera = render_time - last_camera >= 1 / args.camera_hz
+            preview = not args.headless and render_time - last_preview >= 1 / port.preview_hz
+            render = preview or (camera is not None and publish_camera)
+            capture = camera is not None and render and publish_camera
+            if camera is not None:
+                camera.pause()
+                if capture:
+                    camera.resume()
+            world.step(render=render)
+            if render and not args.headless:
+                last_preview = render_time
+            if camera is not None:
+                camera.pause()
             if command != (0.0, 0.0):
                 joint_velocity = robot.get_joint_velocities()[wheel_indices]
                 peak_joint_velocity = [
@@ -359,46 +524,66 @@ def _run(
                     ),
                 )
                 stamp = bridge.publish_state(state)
-            now = time.monotonic()
+            if query is not None and world.current_time - last_scan >= 1 / args.lidar_hz:
+                if args.lidar_vertical_angles is not None:
+                    points = _lidar_points(
+                        query, position, orientation, args, port.robot_prim_path
+                    )
+                    if bridge is not None:
+                        bridge.publish_points(stamp, points)
+                else:
+                    ranges = _lidar_ranges(
+                        query, position, orientation, args, port.robot_prim_path
+                    )
+                    if bridge is not None:
+                        bridge.publish_scan(
+                            stamp,
+                            ranges,
+                            angle_min=args.lidar_angle_min,
+                            angle_max=args.lidar_angle_max,
+                            range_min=args.lidar_min_range,
+                            range_max=args.lidar_max_range,
+                            scan_time=1 / args.lidar_hz,
+                        )
+                last_scan = world.current_time
+                scan_frames += 1
             if camera is not None and capture:
-                color, _ = camera.get_data('rgb')
-                if color is None:
-                    rep.orchestrator.step(rt_subframes=2, pause_timeline=False)
-                    color, _ = camera.get_data('rgb')
-                rgba = (
-                    color.numpy()
-                    if color is not None and hasattr(color, 'numpy')
-                    else np.asarray(color)
-                    if color is not None
-                    else np.empty(0)
-                )
-                if rgba.size == 0 or rgba.shape == ():
+                frame = camera.get_current_frame(clone=True)
+                color = frame['rgb']
+                depth = frame['distance_to_image_plane']
+                if (
+                    color is None
+                    or depth is None
+                    or np.size(color) == 0
+                    or frame['rendering_time'] <= last_completed_camera_time
+                ):
                     empty_camera_frames += 1
                     if empty_camera_frames >= 30:
                         raise RuntimeError(
-                            'Isaac camera produced no RGB frame after 30 capture attempts'
+                            'Isaac camera produced no new completed RGB-D frame after 30 attempts'
                         )
                     continue
+                empty_camera_frames = 0
+                rgba = np.asarray(color)
                 if rgba.shape not in (
                     (args.camera_height, args.camera_width, 3),
                     (args.camera_height, args.camera_width, 4),
                 ):
                     raise RuntimeError(f'unexpected camera frame: {rgba.shape}')
-                if bridge is not None:
-                    image = bridge.publish_color(stamp, rgba)
-                depth, _ = camera.get_data('distance_to_image_plane')
-                depth = (
-                    depth.numpy()
-                    if depth is not None and hasattr(depth, 'numpy')
-                    else np.asarray(depth)
-                )
+                depth = np.asarray(depth)
                 if depth.shape == (args.camera_height, args.camera_width, 1):
                     depth = depth[:, :, 0]
                 if depth.shape != (args.camera_height, args.camera_width):
                     raise RuntimeError('depth camera frame unavailable')
-                if bridge is not None:
+                if bridge is not None and publish_camera:
+                    seconds, nanoseconds = divmod(
+                        round(frame['rendering_time'] * 1_000_000_000), 1_000_000_000
+                    )
+                    image = bridge.publish_color(Time(sec=seconds, nanosec=nanoseconds), rgba)
                     bridge.publish_depth(image.header, depth)
-                last_camera = now
+                if publish_camera:
+                    last_camera = render_time
+                last_completed_camera_time = frame['rendering_time']
                 camera_frames += 1
         if contact_log is not None:
             contact_payload = contact_log.save(port.contact_out)
@@ -413,6 +598,8 @@ def _run(
                     'status': status,
                     'physics_steps': steps,
                     'camera_frames': camera_frames,
+                    'scan_frames': scan_frames,
+                    'sim_seconds': world.current_time - simulation_begin,
                     'physics_only': not args.camera_enabled,
                     'command_count': bridge.command_count if bridge is not None else 0,
                     'motor_requests': bridge.motor_requests if bridge is not None else 0,

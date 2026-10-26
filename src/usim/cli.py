@@ -82,6 +82,16 @@ def build_parser(registrars: Iterable[Registrar] | None = None) -> argparse.Argu
         registrars = (register, register_episode)
     for register in registrars:
         register(commands)
+    if 'simulate' in commands.choices:
+        simulate = commands.choices['simulate']
+        simulate.add_argument('--initial-position', type=float, nargs=3, metavar=('X', 'Y', 'Z'))
+        simulate.add_argument('--initial-yaw', type=float, default=0.0)
+        simulate.add_argument('--real-time', action='store_true')
+        simulate.add_argument('--lidar-enabled', action='store_true')
+        simulate.add_argument('--lidar-offset', type=float, nargs=3, default=(0.0, 0.0, 0.3))
+        simulate.add_argument('--lidar-hz', type=float, default=10.0)
+        simulate.add_argument('--lidar-samples', type=int, default=360)
+        simulate.add_argument('--scan-topic', default='/scan_raw')
     return parser
 
 

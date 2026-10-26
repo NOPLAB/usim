@@ -1,6 +1,7 @@
 """ROS boundary regressions without an Isaac or ROS installation."""
 
 import importlib.util
+from array import array
 import sys
 import tempfile
 import types
@@ -31,6 +32,28 @@ def header():
     return NS(stamp=None, frame_id='')
 
 
+class ImageMessage:
+    """Model the generated uint8 sequence setter's native-array fast path."""
+
+    def __init__(self):
+        self.header = header()
+        self.elementwise_bytes = 0
+        self._data = array('B')
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        if isinstance(value, array):
+            assert value.typecode == 'B'
+            self._data = value
+        else:
+            self.elementwise_bytes += len(value)
+            self._data = array('B', value)
+
+
 class Node:
     def __init__(self, name):
         self.name = name
@@ -56,7 +79,8 @@ def runtime_modules():
         'geometry_msgs.msg': dict(
             PoseStamped=lambda: NS(header=header(), pose=pose()),
             TransformStamped=lambda: NS(
-                header=header(), transform=NS(translation=vector(), rotation=None)
+                header=header(),
+                transform=NS(translation=vector(), rotation=NS(x=0, y=0, z=0, w=0)),
             ),
             Twist=twist,
         ),
@@ -72,7 +96,12 @@ def runtime_modules():
         ),
         'rclpy.time': dict(Time=lambda **kw: NS(to_msg=lambda: kw)),
         'rosgraph_msgs.msg': dict(Clock=NS),
-        'sensor_msgs.msg': dict(Image=lambda: NS(header=header())),
+        'sensor_msgs.msg': dict(
+            Image=ImageMessage,
+            LaserScan=lambda: NS(header=header()),
+            PointCloud2=lambda: NS(header=header()),
+            PointField=type('PointField', (NS,), {'FLOAT32': 7}),
+        ),
         'std_srvs.srv': dict(SetBool=NS(Request=NS)),
         'tf2_msgs.msg': dict(TFMessage=NS),
         'rclpy': {},
@@ -100,6 +129,116 @@ class BridgeTest(unittest.TestCase):
         modules = patch.dict(sys.modules, runtime_modules())
         modules.start()
         self.addCleanup(modules.stop)
+
+    def test_point_cloud_xyz_encoding_topic_and_transform_before_cloud(self):
+        from usim.simulation import Ros2Config
+
+        bridge = self.module.Bridge(
+            camera_enabled=False,
+            lidar_enabled=True,
+            lidar_points=True,
+            lidar_frame='sim_mid360_link',
+            lidar_offset=(0.144, 0.0, 0.275),
+            base_link='base_footprint',
+            configuration=Ros2Config(points_topic='/livox/lidar'),
+        )
+        self.assertNotIn('/scan_raw', bridge.publishers)
+        self.assertIsNone(bridge.scan_pub)
+        self.assertEqual(bridge.points_pub.qos.reliability, 1)
+        events = []
+        bridge.tf_pub.publish = lambda message: events.append(('tf', message))
+        bridge.points_pub.publish = lambda message: events.append(('points', message))
+        stamp = {'seconds': 4.0}
+        cloud = bridge.publish_points(
+            stamp, [[1, 2, 3], [np.inf, 0, 0], [0, np.nan, 0], [-4, 5, -6]]
+        )
+        self.assertEqual([event[0] for event in events], ['tf', 'points'])
+        self.assertIs(events[1][1], cloud)
+        self.assertIs(cloud.header.stamp, stamp)
+        self.assertEqual(cloud.header.frame_id, 'sim_mid360_link')
+        self.assertEqual((cloud.height, cloud.width), (1, 2))
+        self.assertEqual((cloud.point_step, cloud.row_step), (12, 24))
+        self.assertFalse(cloud.is_bigendian)
+        self.assertTrue(cloud.is_dense)
+        self.assertEqual(
+            [(f.name, f.offset, f.datatype, f.count) for f in cloud.fields],
+            [('x', 0, 7, 1), ('y', 4, 7, 1), ('z', 8, 7, 1)],
+        )
+        self.assertEqual(cloud.data, np.array([[1, 2, 3], [-4, 5, -6]], dtype='<f4').tobytes())
+        transform = events[0][1].transforms[0]
+        self.assertEqual(transform.header.frame_id, 'base_footprint')
+        self.assertIs(transform.header.stamp, stamp)
+        self.assertEqual(transform.child_frame_id, 'sim_mid360_link')
+        self.assertEqual(vars(transform.transform.translation), dict(x=0.144, y=0.0, z=0.275))
+        self.assertEqual(vars(transform.transform.rotation), dict(x=0.0, y=0.0, z=0.0, w=1.0))
+
+    def test_empty_cloud_and_external_sensor_transform(self):
+        from usim.simulation import Ros2Config
+
+        bridge = self.module.Bridge(
+            camera_enabled=False,
+            lidar_enabled=True,
+            lidar_points=True,
+            configuration=Ros2Config(publish_lidar_tf=False),
+        )
+        cloud = bridge.publish_points('stamp', np.empty((0, 3)))
+        self.assertEqual((cloud.height, cloud.width, cloud.row_step, cloud.data), (1, 0, 0, b''))
+        self.assertEqual(bridge.points_pub.messages, [cloud])
+        self.assertEqual(bridge.tf_pub.messages, [])
+
+    def test_scan_uses_external_robot_state_publisher_transform(self):
+        from usim.simulation import Ros2Config
+
+        bridge = self.module.Bridge(
+            camera_enabled=False,
+            lidar_enabled=True,
+            configuration=Ros2Config(publish_lidar_tf=False),
+        )
+        bridge.publish_scan(
+            {'seconds': 4.0},
+            [1.0, 2.0],
+            angle_min=-1,
+            angle_max=1,
+            range_min=0.05,
+            range_max=30,
+            scan_time=0.1,
+        )
+        self.assertEqual(len(bridge.scan_pub.messages), 1)
+        self.assertEqual(bridge.tf_pub.messages, [])
+
+    def test_physical_scan_metadata_and_matching_body_transform(self):
+        from usim.simulation import Ros2Config
+
+        bridge = self.module.Bridge(
+            camera_enabled=False,
+            lidar_enabled=True,
+            lidar_offset=(0.1, -0.2, 0.4),
+            base_link='base_footprint',
+            configuration=Ros2Config(scan_topic='/scan_raw'),
+        )
+        stamp = {'seconds': 4.0}
+        scan = bridge.publish_scan(
+            stamp,
+            [1.0, float('inf'), 3.0],
+            angle_min=-1,
+            angle_max=1,
+            range_min=0.05,
+            range_max=30,
+            scan_time=0.1,
+        )
+        self.assertIs(bridge.publishers['/scan_raw'].messages[0], scan)
+        self.assertEqual(scan.header.frame_id, 'lidar_link')
+        self.assertIs(scan.header.stamp, stamp)
+        self.assertEqual(scan.angle_increment, 1.0)
+        self.assertEqual(scan.time_increment, 0.0)
+        self.assertEqual(scan.scan_time, 0.1)
+        self.assertEqual(scan.ranges, [1.0, float('inf'), 3.0])
+        transform = bridge.tf_pub.messages[0].transforms[0]
+        self.assertEqual(transform.header.frame_id, 'base_footprint')
+        self.assertIs(transform.header.stamp, stamp)
+        self.assertEqual(transform.child_frame_id, 'lidar_link')
+        self.assertEqual(vars(transform.transform.translation), dict(x=0.1, y=-0.2, z=0.4))
+        self.assertEqual(transform.transform.rotation.w, 1.0)
 
     def test_topics_qos_and_motor_command(self):
         bridge = self.module.Bridge(camera_enabled=True)
@@ -157,13 +296,15 @@ class BridgeTest(unittest.TestCase):
         self.assertEqual(
             (image.encoding, image.step, image.header.frame_id), ('rgb8', 1920, 'camera_link')
         )
-        self.assertEqual(image.data, bytes([1, 2, 3]) * (480 * 640))
+        self.assertEqual(bytes(image.data), bytes([1, 2, 3]) * (480 * 640))
+        self.assertEqual(image.elementwise_bytes, 0)
         depth = np.full((480, 640), 2.5)
         bridge.publish_depth(image.header, depth)
         output = bridge.depth_pub.messages[0]
         self.assertIs(output.header, image.header)
         self.assertEqual((output.encoding, output.step), ('32FC1', 2560))
-        self.assertEqual(output.data, depth.astype('<f4').tobytes())
+        self.assertEqual(bytes(output.data), depth.astype('<f4').tobytes())
+        self.assertEqual(output.elementwise_bytes, 0)
         tiny = bridge.publish_color(stamp, np.zeros((3, 4, 3), dtype=np.uint8))
         bridge.publish_depth(tiny.header, np.ones((3, 4)))
         depth_output = bridge.depth_pub.messages[-1]
