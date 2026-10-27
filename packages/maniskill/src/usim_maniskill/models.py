@@ -44,6 +44,16 @@ def validate_agent(spec: AgentSpec, asset: Asset) -> None:
         raise ModelError('joint_names must describe all native active joints')
     if spec.control.initial_qpos is not None and len(spec.control.initial_qpos) != len(names):
         raise ModelError('Initial positions must match native joint count')
+    control = spec.control
+    if control.joint_stiffness is not None and control.velocity_joints:
+        raise ModelError('Velocity controllers do not support injected joint stiffness')
+    if any(
+        value is not None
+        for value in (control.joint_stiffness, control.joint_damping, control.joint_force_limits)
+    ):
+        driven = set(control.position_joints + control.velocity_joints) if selected else names
+        if driven != names:
+            raise ModelError('Injected controller gains require every joint to be PD controlled')
     if any(sensor.parent and sensor.parent not in asset.links for sensor in spec.sensors):
         raise ModelError('A sensor parent must name an imported robot link')
 

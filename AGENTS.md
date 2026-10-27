@@ -5,7 +5,7 @@ usim is a general-purpose mobile robot and manipulator simulator.
 `packages/{genesis,isaacsim,maniskill,gazebo}/` owns independent engine distributions;
 `src/usim/bridges/` owns configurable standard ROS interfaces. Application-specific
 policies, evaluation and inference integrations belong to downstream consumers.
-The bundled CRANE-X7 model and meshes are maintained under `src/usim/robots/`.
+Robot models, meshes, registrations and task-specific definitions belong to callers.
 Keep the public core dependency-free. Share configuration, velocity/state data
 and motor gating, but do not invent lockstep `step()` semantics across engines.
 Continuous `Simulator.run()` and native `EpisodeSimulator` are execution capabilities

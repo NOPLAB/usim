@@ -8,7 +8,7 @@ ROS, then include `usim/ros2/src` in `colcon build --base-paths`.
 ```bash
 python -m pip install -e /path/to/usim -e "/path/to/usim/packages/maniskill[native]"
 ros2 run usim_sim usim_sim_node --ros-args \
-  -p env_id:=PickPlace-CRANE-X7 -p robot_uid:=CRANE-X7 \
+  -p env_id:=PickCube-v1 -p robot_uid:=panda \
   -p simulator:=maniskill -p backend:=cpu
 ```
 
@@ -19,8 +19,9 @@ Use `usim`, `usim.types`, `usim.interface` and `usim.factory` for shared APIs.
 ROS dependencies (`rclpy`, `rcl_interfaces`, `cv_bridge` and message packages)
 come from the ROS installation rather than the dependency-free core.
 
-Supply `env_id` and `robot_uid`. Parameters select `robot_path`, joint names,
-`initial_qpos`, `camera_uid`, `camera_frame`, `obs_mode`, `actuator_profile`,
+Supply `env_id` and either an external `robot_path` or a registered `robot_uid`.
+Parameters select joint names, `initial_qpos`, `joint_stiffness`, `joint_damping`,
+`joint_force_limits`, `camera_uid`, `camera_frame`, `obs_mode`,
 control/render modes, simulation rate, episode length, auto-reset, topic names
 and service names. The node is named `usim_sim_node`. Default input `/usim/action`
 is `std_msgs/Float32MultiArray` in the selected engine's action representation.

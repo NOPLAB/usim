@@ -42,6 +42,9 @@ sim = GenesisSimulator(
         joint_names=('shoulder', 'elbow', 'finger'),
         gripper_joint_names=('finger',),
         initial_qpos=(0.0, 0.2, 0.0),
+        joint_stiffness=(100.0, 100.0, 100.0),
+        joint_damping=(10.0, 10.0, 10.0),
+        joint_force_limits=(10.0, 10.0, 2.0),
         backend='cpu',
         render_mode='none',
         obs_mode='state',
@@ -58,13 +61,11 @@ finally:
 ```
 
 Action order is `joint_names` when provided, otherwise configured arm names
-followed by gripper names, not the model's native DOF order. External robots never
-inherit CRANE-X7 joint names, mimic
-behavior, initial pose, or force limits. Their default initial positions are zero;
-provide `initial_qpos` when zero is unsuitable. Neutral PD gains are 100/10;
-model-defined effort bounds remain in effect, except an explicit
-`gripper_force_limit` overrides the mapped gripper bounds. CRANE actuator profiles
-are rejected for external models.
+followed by gripper names, not the model's native DOF order. Robot definitions are
+caller-owned. Default initial positions are zero; provide `initial_qpos` when zero
+is unsuitable. `joint_stiffness`, `joint_damping` and `joint_force_limits` override
+native settings in the same joint order; omitted values preserve native settings.
+The caller expands coupled-joint actions into one target per mapped joint.
 
 Supported control modes are `pd_joint_pos` (absolute radians/meters),
 `pd_joint_delta_pos` (offset from current measured position), `pd_joint_vel`
@@ -97,32 +98,22 @@ controller targets. Unspecified joints keep their previous commands.
 targets at reset rather than a position hold. Array actions still use the
 configured `control_mode` across every mapped joint.
 
-## Bundled CRANE-X7
-
-`SimulatorConfig(env_id="PickPlace-CRANE-X7")` retains the bundled robot's rest
-pose, gains, cube spawning jitter, dense reward, and success condition. It accepts
-either nine mapped values or the compact seven-arm-plus-one-gripper action, whose
-last value drives both fingers. `actuator_profile="servo_envelope"` and
-`gripper_force_limit` set controller effort bounds. The task intentionally
-requires the bundled robot and its default joint mapping.
-
 ## Observations and lifecycle
 
 Joint positions and velocities always have shape `(n_envs, mapped_joints)`.
 `obs_mode="state"` avoids camera creation. `rgb` supplies uint8 color images;
 `rgbd` also supplies float32 depth. `render_mode="none"` disables images, while
 `rgb_array` captures off-screen and `human` additionally opens the viewer.
-The camera uses 640 by 480 pixels; it is not a robot-mounted sensor. CRANE-X7
-retains its workspace viewpoint. External scenes frame the robot's native bounds
-at reset, so their images do not inherit the CRANE-X7 close-up coordinates.
+The camera uses 640 by 480 pixels; it is not a robot-mounted sensor. Scenes frame
+the robot's native bounds at reset.
 Batched scenes render every environment separately rather than copying
 one image into the whole batch. RGB shape is `(n_envs, 480, 640, 3)` and depth
-shape is `(n_envs, 480, 640)`. Pick/place metrics are in `extra["env_info"]`.
+shape is `(n_envs, 480, 640)`.
 
 Reset rewinds selected native scene states, zeros velocities, replaces previous
-controller targets, and resets task objects without taking a physics step.
+controller targets without taking a physics step.
 It does not advance other environments or reset their episode counters.
-Seeded resets reproduce joint noise and cube jitter. `get_observation` refreshes
+Seeded resets reproduce joint noise. `get_observation` refreshes
 state without stepping. `close` destroys scene resources and is idempotent;
 other Genesis scenes remain usable. Genesis initializes once per process;
 switching CPU/CUDA while its runtime is initialized is rejected.
@@ -130,8 +121,8 @@ switching CPU/CUDA while its runtime is initialized is rejected.
 ## Verification
 
 Deterministic tests do not require Genesis. With the optional native environment
-installed, the opt-in smoke tests exercise external MJCF, external URDF, and
-CRANE-X7, plus a free-base wheel-and-arm URDF with mixed named commands, using
+installed, the opt-in smoke tests exercise external MJCF and URDF,
+plus a free-base wheel-and-arm URDF with mixed named commands, using
 two environments, actions, partial reset, observations, and close:
 
 ```console

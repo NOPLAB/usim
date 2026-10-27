@@ -41,6 +41,9 @@ class ControlSpec:
     effort_joints: tuple[str, ...] = ()
     initial_qpos: tuple[float, ...] | None = None
     native_mode: str = 'pd_joint_pos'
+    joint_stiffness: tuple[float, ...] | None = None
+    joint_damping: tuple[float, ...] | None = None
+    joint_force_limits: tuple[float, ...] | None = None
 
     def __post_init__(self) -> None:
         groups = self.position_joints + self.velocity_joints + self.effort_joints
@@ -50,6 +53,18 @@ class ControlSpec:
             raise ModelError('Joint order must contain unique names')
         if self.joint_names and not set(groups) <= set(self.joint_names):
             raise ModelError('Controlled joints must belong to the joint order')
+        for label, values in (
+            ('stiffness', self.joint_stiffness),
+            ('damping', self.joint_damping),
+            ('force limits', self.joint_force_limits),
+        ):
+            if values is not None:
+                if not self.joint_names or len(values) != len(self.joint_names):
+                    raise ModelError(f'Joint {label} require an explicit matching joint order')
+                if not all(isfinite(value) and value >= 0 for value in values):
+                    raise ModelError(f'Joint {label} must be finite and nonnegative')
+                if label == 'force limits' and any(value == 0 for value in values):
+                    raise ModelError('Joint force limits must be positive')
         if self.initial_qpos is not None:
             if not all(isfinite(value) for value in self.initial_qpos):
                 raise ModelError('Initial positions must be finite')

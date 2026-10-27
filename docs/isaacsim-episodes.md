@@ -13,14 +13,19 @@ from usim_isaacsim.adapter import IsaacSimSimulator
 
 sim = IsaacSimSimulator(
     SimulatorConfig(
-        env_id='PickPlace-CRANE-X7',
+        env_id='JointControl',
+        robot_path='/absolute/path/to/robot.urdf',
+        joint_names=('hinge',),
+        joint_stiffness=(100.0,),
+        joint_damping=(10.0,),
+        joint_force_limits=(5.0,),
         render_mode='none',
         obs_mode='state',
     )
 )
 try:
     observation, info = sim.reset(seed=42)
-    result = sim.step(observation.qpos + np.zeros(9))
+    result = sim.step(observation.qpos + np.zeros(1))
     print(result.observation.qpos, result.reward, result.info)
 finally:
     sim.close()
@@ -28,8 +33,8 @@ finally:
 
 ## Robots and control
 
-The default robot is the bundled CRANE-X7 MJCF. `JointControl` also accepts
-external MJCF `.xml`, URDF, and USD files through `robot_path`. Imported MJCF
+`JointControl` requires caller-owned MJCF `.xml`, URDF, or USD files through
+`robot_path`. There is no implicit robot selection. Imported MJCF
 and URDF robots honor `fixed_base` (default true); set it false for a mobile
 base and arm in one articulation. USD preserves the authored base configuration.
 USD inputs must use metres, Z-up, one PhysX articulation, and physical
@@ -57,17 +62,16 @@ configured names, all articulation DOFs become arm joints in native order.
 Observations are single-environment vectors, not batched arrays.
 Actions are absolute PD joint-position targets in radians for revolute
 joints and metres for prismatic joints. Targets and reset noise are clipped
-to articulation limits. CRANE's default joint selection accepts nine
-targets or eight targets, copying the last target to both finger joints.
-Other joint selections require exactly one target per selected joint.
+to articulation limits. Actions require exactly one target per selected joint;
+the caller expands any coupled-joint representation.
 
-PD gains use the shared CRANE defaults (stiffness 1000, damping 100).
-Effort limits use the selected actuator profile and optional gripper limit;
-these are simulator bounds, not calibrated actuator ratings. External robots
-should explicitly assess whether these gains and bounds suit their asset.
+PD gains and effort limits retain native model values unless overridden with
+`joint_stiffness`, `joint_damping` and `joint_force_limits`. Each tuple follows
+the explicitly configured joint order. These are simulator bounds, not calibrated
+actuator ratings. Velocity-controlled joints use zero stiffness.
 Each `step` advances one native physics timestep of `1/sim_rate`; reset sets
 positions, zero velocities and matching targets without a settling step.
-Seeded resets reproduce joint noise and object spawn jitter.
+Seeded resets reproduce joint noise.
 
 For combined mobile and arm models, specify `velocity_joint_names` within the
 selected DOFs. The same articulation then uses zero stiffness velocity drives
@@ -107,21 +111,13 @@ is changed. Reset explicitly clears wheel velocity targets.
 
 `JointControl` has no task reward: reward is zero, termination is false,
 and `info["task_reward"]` is false. Episode limits still truncate it.
-`PickPlace-CRANE-X7` requires the bundled robot and creates a ground surface
-and a physical 4 cm, 50 g cube. Its metric and dense reward follow the
-existing CRANE task: distance from the midpoint of the two finger tips
-(6 cm along each finger's local Z), height progress from 2 cm to 14 cm,
-reaching reward `1 - tanh(5 * distance)`, and `exp(-10 * distance)` bonus.
-Success requires cube height at least 14 cm and tip distance at most 5 cm,
-returning reward 5 and termination. This is the existing height-and-proximity
-criterion, not contact-verified grasping or placement at a target.
-Object dynamics remain native PhysX; the adapter never attaches the cube
-or synthesizes joint motion.
+Task objects, metrics and rewards belong to the caller. The grouped API can
+declare independent scene entities and sensors without a robot-specific recipe.
 
 Use `obs_mode="state"` or `render_mode="none"` to omit camera creation.
-`rgb` and `rgbd` use the native RTX sensor at 640 by 480. CRANE supports
-`hand_camera` (mounted to its gripper) and `scene_camera`; external robots
-require `scene_camera`. Capturing an observation renders at zero simulation
+`rgb` and `rgbd` use the native RTX sensor at 640 by 480. Set
+`camera_uid='scene_camera'` for this adapter; mounted cameras use an explicit
+`SensorSpec` through the grouped API. Capturing an observation renders at zero simulation
 delta so it does not add a physics timestep. Missing camera frames raise an
 error rather than returning a fabricated image.
 
@@ -135,7 +131,7 @@ in another process rather than restarting Kit in the same interpreter.
 
 `test/test_isaac_adapter.py` uses deterministic native API fixtures to
 exercise import configuration, articulation ordering, gains, actions,
-stepping, seeded resets, cube metrics, camera data, cleanup and failures.
+stepping, seeded resets, camera data, cleanup and failures.
 Fixtures do not validate the GPU renderer, imported meshes, or PhysX contacts.
 The development Python environment has no `isaacsim` package. A direct
 bootstrap attempt fails at `from isaacsim import SimulationApp` with

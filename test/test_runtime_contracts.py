@@ -54,6 +54,32 @@ def test_nonfinite_targets_reject_before_control_dispatch(value):
         ControlTargets(positions={'joint': value})
 
 
+@pytest.mark.parametrize(
+    'settings',
+    [
+        {'joint_stiffness': (-1.0,)},
+        {'joint_damping': (float('nan'),)},
+        {'joint_force_limits': (0.0,)},
+        {'joint_force_limits': (float('inf'),)},
+        {'joint_stiffness': (10.0, 20.0)},
+    ],
+)
+def test_invalid_joint_controller_settings_reject_before_native_loading(settings):
+    # Given controller values that cannot describe the declared joint order.
+    # When parsing an external controller specification.
+    # Then no native backend is needed to reject invalid physical settings.
+    with pytest.raises(ModelError):
+        ControlSpec(joint_names=('hinge',), **settings)
+
+
+def test_joint_controller_overrides_require_explicit_joint_order():
+    # Given numeric gains without a declared mapping.
+    # When parsing the controller boundary.
+    # Then gains cannot silently bind to an engine-dependent order.
+    with pytest.raises(ModelError):
+        ControlSpec(joint_stiffness=(100.0,))
+
+
 def test_targets_snapshot_caller_owned_mappings_and_batches():
     # Given a caller-owned batch and mapping.
     batch = [0.1, 0.2]

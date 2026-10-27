@@ -4,16 +4,16 @@ The workspace has five independently buildable distributions:
 
 | Distribution / import | Responsibility |
 | --- | --- |
-| `usim` | Interfaces, configuration, CLI, provider discovery, ROS bridges and robot assets |
+| `usim` | Interfaces, configuration, CLI, provider discovery and ROS bridges |
 | `usim-genesis` / `usim_genesis` | Genesis scenes and native robot control |
 | `usim-isaacsim` / `usim_isaacsim` | Isaac continuous execution and native episodes |
-| `usim-maniskill` / `usim_maniskill` | ManiSkill registered robots, tasks and native controllers |
+| `usim-maniskill` / `usim_maniskill` | ManiSkill model imports, externally registered agents and native controllers |
 | `usim-gazebo` / `usim_gazebo` | Supervised Gazebo execution and container staging |
 
 The initial source-preservation checkpoint is recorded in
 [migration-manifest.json](migration-manifest.json). Model meshes were preserved
 byte-for-byte; text line endings were normalized. Recorded checkpoint hashes
-precede subsequent engine enhancements.
+precede subsequent engine enhancements and removal of bundled robot assets.
 
 ## Installation
 
@@ -52,11 +52,12 @@ There is no generic policy or guessed action conversion in the CLI:
 
 ```sh
 uv run --extra genesis usim run --engine genesis --compute cpu \
-  --env-id PickPlace-CRANE-X7 --render-mode none --obs-mode state
+  --robot /absolute/path/robot.urdf --joint-names hinge \
+  --joint-stiffness 100 --joint-damping 10 --render-mode none --obs-mode state
 uv run --extra maniskill usim run --engine maniskill --compute gpu \
-  --env-id PickPlace-CRANE-X7 --render-mode rgb_array --obs-mode rgb
+  --env-id PickCube-v1 --robot-uid panda --render-mode rgb_array --obs-mode rgb
 uv run --extra isaac usim run --engine isaacsim --compute gpu \
-  --env-id JointControl --render-mode none --obs-mode state
+  --robot /absolute/path/robot.usd --env-id JointControl --render-mode none --obs-mode state
 ```
 
 `simulate` launches a continuous runner using a native world and URDF. Existing
@@ -106,12 +107,12 @@ from usim import SimulatorConfig, create_simulator
 
 simulator = create_simulator(
     'maniskill',
-    SimulatorConfig(env_id='PickPlace-CRANE-X7', backend='gpu'),
+    SimulatorConfig(env_id='PickCube-v1', robot_uid='panda', backend='gpu'),
 )
 try:
     observation, info = simulator.reset(seed=0)
     # Supply an action produced for this task's native controller.
-    action = [0.0, 0.39, 0.0, -1.96, 0.0, -0.79, 1.57, 0.0]
+    action = simulator.get_qpos()[:8]
     result = simulator.step(action)
 finally:
     simulator.close()
@@ -125,6 +126,10 @@ Selecting an unsupported capability fails before launching an engine.
 `SimulatorConfig` provides robot model/UID, full ordered `joint_names`, optional
 component joint groups, `initial_qpos`, `fixed_base`, native control/observation
 mode and batch size. It does not classify a robot as mobile or manipulator.
+No robot is selected implicitly. Models, meshes, coupled-joint action expansion
+and task registrations belong to the caller. Per-joint `joint_stiffness`,
+`joint_damping` and `joint_force_limits` are optional numeric overrides in the
+explicit joint order; unsupported backend overrides fail rather than being ignored.
 State/action shape and native mode support are documented by each engine.
 
 ## One mobile-arm robot

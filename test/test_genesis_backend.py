@@ -207,6 +207,29 @@ def test_two_entities_expose_native_loaded_state_and_free_base_schema(grouped_na
         assert grouped_native.scenes[0].steps == 0
 
 
+def test_grouped_controller_uses_caller_values_in_declared_order(grouped_native, spec):
+    # Given gains and limits ordered differently from native joint indices.
+    agent = spec.agents[0]
+    control = ControlSpec(
+        joint_names=('finger', 'wheel', 'arm'),
+        position_joints=('finger', 'arm'),
+        velocity_joints=('wheel',),
+        joint_stiffness=(200.0, 0.0, 1000.0),
+        joint_damping=(20.0, 10.0, 100.0),
+        joint_force_limits=(2.0, 5.0, 10.0),
+    )
+    # When opening the caller-owned model through the grouped API.
+    with Backend().open(replace(spec, agents=(replace(agent, control=control),))):
+        # Then numeric values and DOF indices retain their explicit correspondence.
+        entity = grouped_native.scenes[0].entities[1]
+        np.testing.assert_array_equal(entity.kp, [200, 0, 1000])
+        np.testing.assert_array_equal(entity.kv, [20, 10, 100])
+        lower, upper, indices = entity.force_ranges[0]
+        np.testing.assert_array_equal(lower, [-2, -5, -10])
+        np.testing.assert_array_equal(upper, [2, 5, 10])
+        assert indices == [8, 6, 7]
+
+
 def test_mixed_controls_apply_without_advancement_then_one_episode_step(grouped_native, spec):
     # Given a mobile arm with three independent control channels.
     with Backend().open(spec, ExecutionSpec(max_episode_steps=1)) as session:

@@ -17,16 +17,15 @@ fails in upstream SAPIEN with a missing `cuda.dll`; use the explicit CPU backend
 there rather than silently changing a GPU request. WSL additionally needs a
 working NVIDIA Vulkan ICD; CUDA visibility alone does not provide rendering.
 
-Verified CRANE reset, action, RGBD observation and close:
+Select an upstream registered task and robot explicitly:
 
 ```sh
-usim run --engine maniskill --env-id PickPlace-CRANE-X7 --compute cpu \
-  --obs-mode rgbd --render-mode rgb_array --steps 2 \
-  --action 0 0.392699 0 -1.963495 0 -0.785398 1.570796 0.02
+usim run --engine maniskill --env-id PickCube-v1 --robot-uid panda --compute cpu \
+  --obs-mode state --render-mode none --steps 0
 ```
 
-Standard registered ManiSkill tasks and robots do not load the bundled CRANE
-agent or its assets:
+Custom agent and task registration belongs to the caller and must be imported
+before selecting it. No CRANE agent or assets are bundled:
 
 ```python
 from usim import SimulatorConfig, create_simulator
@@ -102,9 +101,11 @@ environment. `backend="cpu"` only supports one environment; use `"auto"` or
 An explicit `robot_path` is rejected: custom models must first be registered as
 ManiSkill agents and selected through `robot_uid`.
 
-The `PickPlace-CRANE-X7` compatibility task, CRANE force profiles and overrides,
-hand/scene cameras, and `usim_maniskill.visual_domains` remain available.
-CRANE-specific force overrides are rejected for other registered robots.
+Robot-specific tasks, cameras and named actuator profiles belong to downstream
+applications. Supply numerical per-joint controller overrides through
+`joint_stiffness`, `joint_damping` and `joint_force_limits`, in explicit joint order,
+where the selected controller supports them. The grouped API also accepts direct
+URDF/MJCF `ModelSource` inputs; see [grouped runtime](grouped-runtime.md).
 
 Upstream batch behavior:
 <https://maniskill.readthedocs.io/en/latest/user_guide/getting_started/quickstart.html>

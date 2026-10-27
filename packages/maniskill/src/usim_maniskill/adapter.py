@@ -36,14 +36,30 @@ class ManiSkillSimulator(EpisodeSimulator):
         """Initialize ManiSkill environment."""
         if self.config.robot_path is not None:
             raise ValueError(
-                'ManiSkill robot_path is unsupported; register a ManiSkill agent and use robot_uid'
+                'ManiSkill robot_path requires the grouped ModelSource API; '
+                'registered agents own their model paths'
             )
         if not float(self.config.sim_rate).is_integer():
             raise ValueError('ManiSkill sim_rate must be an integer control frequency in Hz')
         if self.config.n_envs > 1 and self.config.backend in ('cpu', 'physx_cpu'):
             raise ValueError("ManiSkill n_envs > 1 requires backend='gpu' or 'auto'")
 
-        import mani_skill.envs  # noqa: F401 - registers standard environments and agents
+        if not self.config.robot_uid:
+            raise ValueError('ManiSkill registered agents require an explicit robot_uid')
+        if any(
+            value is not None
+            for value in (
+                self.config.joint_stiffness,
+                self.config.joint_damping,
+                self.config.joint_force_limits,
+            )
+        ):
+            raise ValueError(
+                'Registered ManiSkill agents own their controller gains; '
+                'configure the external agent or use a grouped direct model'
+            )
+
+        import mani_skill.envs  # noqa: F401 - registers upstream tasks and agents
 
         kwargs: dict[str, str | float] = {
             'render_backend': 'cpu' if self.config.backend == 'cpu' else 'gpu'
@@ -53,31 +69,6 @@ class ManiSkillSimulator(EpisodeSimulator):
             render_mode = None
             if self.config.obs_mode in ('none', 'state', 'state_dict'):
                 kwargs['render_backend'] = 'none'
-        if self.config.robot_uid == 'CRANE-X7':
-            from usim_maniskill.agent import CraneX7
-            from usim.robots.crane_x7 import CraneX7Config
-
-            CraneX7.arm_force_limit, CraneX7.gripper_force_limit = (
-                CraneX7Config.controller_force_limits(self.config.actuator_profile)
-            )
-            if self.config.gripper_force_limit is not None:
-                CraneX7.gripper_force_limit = self.config.gripper_force_limit
-        elif (
-            self.config.actuator_profile != 'legacy' or self.config.gripper_force_limit is not None
-        ):
-            raise ValueError('Force overrides are supported only by the CRANE-X7 registered agent')
-
-        if self.config.env_id.startswith('PickPlace-CRANE-X7'):
-            from usim_maniskill.environments import PickPlace
-
-            if self.config.robot_uid != 'CRANE-X7':
-                raise ValueError("PickPlace-CRANE-X7 requires robot_uid='CRANE-X7'")
-            if self.config.camera_uid not in ('hand_camera', 'scene_camera'):
-                raise ValueError(f'Unsupported CRANE pick-place camera: {self.config.camera_uid}')
-            if self.config.env_id == 'PickPlace-CRANE-X7':
-                PickPlace.use_scene_camera = self.config.camera_uid == 'scene_camera'
-            kwargs['robot_init_qpos_noise'] = self.config.robot_init_qpos_noise
-
         self._env = gym.make(
             self.config.env_id,
             render_mode=render_mode,

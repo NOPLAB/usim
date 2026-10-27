@@ -190,6 +190,11 @@ def build(prepared: PreparedScene, options: ExecutionSpec, resources: ExitStack)
         controllers[name] = resolved
         indices = [bound.native.get_joint(joint).dofs_idx_local[0] for joint in native_names]
         if indices:
-            bound.native.set_dofs_kp(np.full(len(indices), 100.0), indices)
-            bound.native.set_dofs_kv(np.full(len(indices), 10.0), indices)
+            if control.joint_stiffness is not None:
+                bound.native.set_dofs_kp(np.asarray(control.joint_stiffness), indices)
+            if control.joint_damping is not None:
+                bound.native.set_dofs_kv(np.asarray(control.joint_damping), indices)
+            if control.joint_force_limits is not None:
+                force = np.asarray(control.joint_force_limits)
+                bound.native.set_dofs_force_range(-force, force, indices)
     return BuiltScene(scene, entities, controllers, cameras, lidars)

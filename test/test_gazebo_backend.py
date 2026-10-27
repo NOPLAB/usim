@@ -58,6 +58,30 @@ def model(tmp_path: Path) -> ModelSource:
     return ModelSource.from_path(path)
 
 
+@pytest.mark.parametrize(
+    'control',
+    [
+        ControlSpec(joint_names=('wheel',), joint_stiffness=(10.0,)),
+        ControlSpec(joint_names=('wheel',), joint_damping=(10.0,)),
+        ControlSpec(joint_names=('wheel',), joint_force_limits=(10.0,)),
+    ],
+)
+def test_controller_overrides_reject_before_gazebo_start(model, control):
+    # Given requested controller settings that native services cannot apply.
+    spec = SceneSpec(agents=(AgentSpec('robot', model, control),))
+    started = []
+
+    def create_transport(directory):
+        started.append(directory)
+        raise AssertionError('Native execution must not start')
+
+    # When opening an unsupported scene.
+    with pytest.raises(UnsupportedOperation):
+        Backend(transport_factory=create_transport).open(spec, ExecutionSpec(mode='continuous'))
+    # Then no values are silently ignored and no process is launched.
+    assert started == []
+
+
 class ServiceWorld:
     """Service-boundary fake whose spawn/delete/state mutations obey real preconditions."""
 

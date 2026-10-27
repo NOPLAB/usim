@@ -15,11 +15,10 @@ else:
 from usim.types import JointCommand, SimulatorConfig
 import usim_isaacsim.adapter as adapter
 from usim_isaacsim.adapter import IsaacSimSimulator
-from usim.robots.crane_x7 import CraneX7Config
 
 
 @pytest.fixture
-def native(monkeypatch):
+def native(monkeypatch, tmp_path):
     """Preserve articulation indexing, native stepping, and lifetime boundaries."""
     state = SimpleNamespace(
         events=[],
@@ -28,7 +27,7 @@ def native(monkeypatch):
         worlds=[],
         robots=[],
         cameras=[],
-        names=list(reversed(CraneX7Config.ALL_JOINT_NAMES)),
+        names=['tool', 'wrist', 'shoulder'],
         roots=1,
         missing_output=False,
         plugins=[],
@@ -77,17 +76,10 @@ def native(monkeypatch):
         def GetVariantSet(self, name):
             return SimpleNamespace(SetVariantSelection=lambda value: state.events.append(value))
 
-    links = [
-        'crane_x7_gripper_base_link',
-        'crane_x7_gripper_finger_a_link',
-        'crane_x7_gripper_finger_b_link',
-    ]
-
     class Stage:
         def Traverse(self):
             return [
                 *[Prim(f'/World/Robot/root{i}', True) for i in range(state.roots)],
-                *[Prim('/World/Robot/' + name) for name in links],
             ]
 
         def GetPrimAtPath(self, path):
@@ -106,8 +98,9 @@ def native(monkeypatch):
             self.targets = self.qpos.copy()
             self.velocity_targets = self.qpos.copy()
             self.modes = np.full(len(self.dof_names), 'position', dtype=object)
-            self.kp = self.qpos.copy()
-            self.kd = self.qpos.copy()
+            self.kp = np.full(len(self.dof_names), 17.0)
+            self.kd = np.full(len(self.dof_names), 2.0)
+            self.efforts = np.full(len(self.dof_names), 8.0)
             state.robots.append(self)
 
         def get_dof_index(self, name):
@@ -152,7 +145,6 @@ def native(monkeypatch):
             self.robot.kp, self.robot.kd = kps.copy(), kds.copy()
 
         def set_max_efforts(self, efforts, *, joint_indices):
-            self.robot.efforts = np.zeros(len(self.robot.dof_names))
             self.robot.efforts[joint_indices] = efforts
 
         def switch_control_mode(self, mode):
@@ -282,6 +274,19 @@ def native(monkeypatch):
             )
         ),
     )
+    path = tmp_path / 'external.urdf'
+    path.write_text('<robot name="external"><link name="base"/></robot>', encoding='utf-8')
+    original_config = config
+
+    def external_config(**kwargs):
+        kwargs.setdefault('robot_path', str(path))
+        if not any(
+            key in kwargs for key in ('joint_names', 'arm_joint_names', 'gripper_joint_names')
+        ):
+            kwargs['joint_names'] = ('shoulder', 'wrist', 'tool')
+        return original_config(**kwargs)
+
+    monkeypatch.setattr(sys.modules[__name__], 'config', external_config)
     return state
 
 
@@ -298,22 +303,21 @@ def config(**kwargs):
 def test_native_joint_mapping_targets_step_observation_and_close(native):
     sim = IsaacSimSimulator(config(sim_rate=60, max_episode_steps=2))
     robot, world = native.robots[0], native.worlds[0]
-    np.testing.assert_allclose(sim.get_qpos(), CraneX7Config.REST_QPOS)
-    assert sim.all_joint_names == CraneX7Config.ALL_JOINT_NAMES
-    np.testing.assert_array_equal(sim._indices, np.arange(8, -1, -1))
-    assert np.all(robot.kp == 1000) and np.all(robot.kd == 100)
+    np.testing.assert_allclose(sim.get_qpos(), np.zeros(3))
+    assert sim.all_joint_names == ['shoulder', 'wrist', 'tool']
+    np.testing.assert_array_equal(sim._indices, np.arange(2, -1, -1))
+    assert np.all(robot.kp == 17) and np.all(robot.kd == 2)
+    np.testing.assert_allclose(robot.efforts, 8)
     assert world.steps == 0
-    action = np.arange(8) / 10
+    action = np.arange(3) / 10
     result = sim.step(action)
-    np.testing.assert_allclose(result.observation.qpos, np.r_[action, action[-1]])
-    np.testing.assert_allclose(
-        result.observation.qvel, (np.r_[action, action[-1]] - CraneX7Config.REST_QPOS) * 60
-    )
+    np.testing.assert_allclose(result.observation.qpos, action)
+    np.testing.assert_allclose(result.observation.qvel, (action - np.zeros(3)) * 60)
     assert world.steps == 1 and result.reward == 0 and not result.terminated
     assert not result.truncated and result.info['task_reward'] is False
     result.observation.qpos[:] = 999
     assert sim.get_qpos()[0] == 0
-    assert sim.step(np.full(9, 9)).truncated
+    assert sim.step(np.full(3, 9)).truncated
     np.testing.assert_allclose(sim.get_qpos(), 3)
     output = Path(native.imports[0].usd_path)
     sim.close()
@@ -327,13 +331,30 @@ def test_native_joint_mapping_targets_step_observation_and_close(native):
 def test_seeded_reset_noise_velocity_and_targets(native):
     sim = IsaacSimSimulator(config(robot_init_qpos_noise=0.02))
     first, _ = sim.reset(seed=42)
-    sim.step(np.zeros(9))
+    sim.step(np.zeros(3))
     second, _ = sim.reset(seed=42)
     np.testing.assert_array_equal(first.qpos, second.qpos)
-    assert not np.array_equal(first.qpos, CraneX7Config.REST_QPOS)
-    np.testing.assert_array_equal(second.qvel, np.zeros(9))
+    assert not np.array_equal(first.qpos, np.zeros(3))
+    np.testing.assert_array_equal(second.qvel, np.zeros(3))
     np.testing.assert_array_equal(native.robots[0].targets[sim._indices], second.qpos)
     assert native.worlds[0].steps == 1
+    sim.close()
+
+
+def test_injected_joint_controls_follow_selected_order_and_preserve_other_dofs(native):
+    native.names = ['wrist', 'unused', 'shoulder']
+    sim = IsaacSimSimulator(
+        config(
+            joint_names=('shoulder', 'wrist'),
+            joint_stiffness=(21.0, 32.0),
+            joint_damping=(4.0, 5.0),
+            joint_force_limits=(6.0, 7.0),
+        )
+    )
+    robot = native.robots[0]
+    np.testing.assert_allclose(robot.kp, [32, 17, 21])
+    np.testing.assert_allclose(robot.kd, [5, 2, 4])
+    np.testing.assert_allclose(robot.efforts, [7, 8, 6])
     sim.close()
 
 
@@ -357,10 +378,7 @@ def test_native_resources_released_before_app_shutdown(native, monkeypatch):
     close_app = native.apps[0].close
 
     def close_without_native_references():
-        assert all(
-            vars(sim)[name] is None for name in ('_world', '_robot', '_stage', '_camera', '_cube')
-        )
-        assert vars(sim)['_fingers'] == []
+        assert all(vars(sim)[name] is None for name in ('_world', '_robot', '_stage', '_camera'))
         assert native.worlds[0].instance_cleared
         close_app()
 
@@ -477,7 +495,7 @@ def test_external_joint_discovery(native, tmp_path):
     native.names = ['second', 'first']
     path = tmp_path / 'robot.usd'
     path.write_text('fixture', encoding='utf-8')
-    sim = IsaacSimSimulator(config(robot_path=str(path), robot_uid='custom'))
+    sim = IsaacSimSimulator(config(robot_path=str(path), robot_uid='custom', joint_names=()))
     assert sim.arm_joint_names == native.names and sim.gripper_joint_names == []
     assert sim.joint_names == native.names and sim.all_joint_names == sim.joint_names
     sim.close()
@@ -529,7 +547,7 @@ def test_one_free_articulation_accepts_mixed_named_commands(native, tmp_path):
     np.testing.assert_allclose(result.observation.qvel, [2.0, 5.0, -1.0])
     robot = native.robots[0]
     np.testing.assert_array_equal(robot.modes, ['velocity', 'position', 'position', 'velocity'])
-    np.testing.assert_allclose(robot.kp, [0, 0, 1000, 0])
+    np.testing.assert_allclose(robot.kp, [0, 17, 17, 0])
     # Unspecified native DOFs are retained; named commands don't address them.
     assert robot.qpos[1] == 0
     result = sim.step(JointCommand(velocities={'left_wheel': 0.0, 'right_wheel': 0.0}))
@@ -559,29 +577,11 @@ def test_one_free_articulation_accepts_mixed_named_commands(native, tmp_path):
 
 def test_named_position_command_preserves_other_targets(native):
     sim = IsaacSimSimulator(config())
-    name = CraneX7Config.ARM_JOINT_NAMES[0]
+    name = 'shoulder'
     result = sim.step(JointCommand(positions={name: np.array([0.25])}))
-    expected = CraneX7Config.REST_QPOS.copy()
+    expected = np.zeros(3).copy()
     expected[0] = 0.25
     np.testing.assert_allclose(result.observation.qpos, expected)
-    sim.close()
-
-
-def test_pick_place_physical_reset_metrics_and_reward(native):
-    sim = IsaacSimSimulator(config(env_id='PickPlace-CRANE-X7'))
-    sim.reset(seed=7)
-    first = sim._cube.position.copy()
-    sim.reset(seed=7)
-    np.testing.assert_array_equal(first, sim._cube.position)
-    assert np.all(sim._cube.linear_velocity == 0) and np.all(sim._cube.angular_velocity == 0)
-    sim._cube.position = np.array([0.15, 0.02, 0.14])
-    success = sim.step(CraneX7Config.REST_QPOS)
-    assert success.reward == 5 and success.terminated and success.info['success']
-    sim._cube.position = np.array([0.15, 0.02, 0.02])
-    failure = sim.step(CraneX7Config.REST_QPOS)
-    distance = failure.info['gripper_to_cube_dist']
-    assert failure.reward == pytest.approx(1 - np.tanh(5 * distance) + np.exp(-10 * distance))
-    assert not failure.terminated
     sim.close()
 
 
@@ -589,7 +589,7 @@ def test_rgbd_camera_captures_without_extra_physics(native):
     sim = IsaacSimSimulator(
         config(obs_mode='rgbd', render_mode='rgb_array', camera_uid='scene_camera')
     )
-    observation = sim.step(np.zeros(9)).observation
+    observation = sim.step(np.zeros(3)).observation
     assert observation.rgb_image.shape == (480, 640, 3)
     assert observation.rgb_image.dtype == np.uint8
     assert np.all(observation.rgb_image == 23)
@@ -607,7 +607,7 @@ def test_rgbd_camera_captures_without_extra_physics(native):
         ({'n_envs': 2}, 'n_envs=1'),
         ({'control_mode': 'velocity'}, 'pd_joint_pos'),
         ({'obs_mode': 'invalid'}, 'obs_mode'),
-        ({'robot_uid': 'custom'}, 'robot_path'),
+        ({'robot_path': None}, 'robot_path'),
     ],
 )
 def test_unsupported_choices_fail_before_starting_app(native, change, error):
@@ -628,7 +628,7 @@ def test_initialization_errors_release_app_and_imports(native, fault):
     elif fault == 'camera':
         options.update(obs_mode='rgb', render_mode='rgb_array', camera_uid='invalid')
     else:
-        options['initial_qpos'] = tuple([10.0] * 9)
+        options['initial_qpos'] = tuple([10.0] * 3)
     with pytest.raises((ValueError, RuntimeError)):
         IsaacSimSimulator(config(**options))
     assert native.apps[0].closed
@@ -636,7 +636,7 @@ def test_initialization_errors_release_app_and_imports(native, fault):
 
 
 @pytest.mark.parametrize(
-    'action', [np.zeros(7), np.zeros((1, 9)), np.full(9, np.nan), np.full(9, np.inf)]
+    'action', [np.zeros(7), np.zeros((1, 3)), np.full(3, np.nan), np.full(3, np.inf)]
 )
 def test_bad_action_does_not_advance(native, action):
     sim = IsaacSimSimulator(config())

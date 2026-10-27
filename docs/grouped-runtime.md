@@ -15,6 +15,11 @@ infer a downstream checkout.
 joint order and disjoint position, velocity and effort groups. `AgentSpec`
 combines a model, controls and sensors. `RegisteredAgentRef` is a separate
 backend-qualified recipe; importing geometry never invents a controller or task.
+Robot assets and recipes belong to callers; usim does not bundle a robot.
+`ControlSpec.joint_stiffness`, `joint_damping` and `joint_force_limits` optionally
+override native controller values in explicit `joint_names` order. Gains must be
+finite and nonnegative, and force limits finite and positive. Omitted values
+preserve native settings. Callers expand coupled-joint targets themselves.
 `SceneSpec` contains independent entities, agents and an optional native world.
 `ExecutionSpec` selects episode or continuous execution, not a robot category.
 
@@ -105,6 +110,9 @@ scene = SceneSpec(
                 joint_names=('wheel', 'arm'),
                 velocity_joints=('wheel',),
                 position_joints=('arm',),
+                joint_stiffness=(0.0, 100.0),
+                joint_damping=(10.0, 10.0),
+                joint_force_limits=(5.0, 10.0),
             ),
             requirements=ImportRequirements(base='floating'),
         ),

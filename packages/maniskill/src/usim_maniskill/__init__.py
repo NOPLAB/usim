@@ -3,7 +3,7 @@
 
 """ManiSkill simulator implementation for usim abstraction."""
 
-__all__ = ['Backend', 'ManiSkillSimulator', 'CraneX7']
+__all__ = ['Backend', 'ManiSkillSimulator']
 
 
 def __getattr__(name: str):
@@ -15,8 +15,4 @@ def __getattr__(name: str):
         from usim_maniskill.adapter import ManiSkillSimulator
 
         return ManiSkillSimulator
-    if name == 'CraneX7':
-        from usim_maniskill.agent import CraneX7
-
-        return CraneX7
     raise AttributeError(name)

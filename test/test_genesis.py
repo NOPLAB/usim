@@ -9,7 +9,6 @@ import pytest
 
 from usim.types import JointCommand, SimulatorConfig
 from usim_genesis import GenesisSimulator
-from usim.robots.crane_x7 import CraneX7Config
 
 
 class Entity:
@@ -80,10 +79,6 @@ class Entity:
 
     def get_vverts(self):
         return np.tile([[-1, -1, 0], [1, 1, 2]], (len(self.pos), 1, 1))
-
-    def get_link(self, name):
-        assert name == 'crane_x7_gripper_base_link'
-        return SimpleNamespace(get_pos=lambda: np.tile([0.15, 0.02, 0.1], (len(self.pos), 1)))
 
 
 class Scene:
@@ -280,25 +275,27 @@ def test_invalid_action_does_not_advance_physics(native, config, action):
     sim.close()
 
 
-def test_crane_pick_place_preserves_mimic_reward_and_force_limits(native):
-    # Given the original CRANE-X7 task and its independent finger joints.
-    native.names = CraneX7Config.ALL_JOINT_NAMES
+def test_injected_controller_settings_follow_explicit_joint_order(native, config):
+    # Given caller-owned gains and force limits in a non-native joint order.
     sim = GenesisSimulator(
-        SimulatorConfig(
-            env_id='PickPlace-CRANE-X7',
-            render_mode='none',
-            robot_init_qpos_noise=0,
-            gripper_force_limit=2,
+        replace(
+            config,
+            joint_stiffness=(1000, 500, 200),
+            joint_damping=(100, 50, 20),
+            joint_force_limits=(10, 4, 2),
         )
     )
-    # When commanding the compact seven-arm-plus-one-gripper action.
-    result = sim.step(np.arange(8) * 0.01)
-    # Then both fingers follow the compact value and task metrics remain batched.
-    np.testing.assert_allclose(result.observation.qpos[0, -2:], [0.07, 0.07])
-    assert result.reward.shape == (1,)
-    assert result.info[0]['cube_height'] == pytest.approx(0.02)
-    assert result.observation.extra['env_info'][0]['height_reached'] is False
-    np.testing.assert_array_equal(native.scenes[0].entities[0].force_ranges[-1][1], [2, 2])
+    # When applying a fully expanded action.
+    result = sim.step(np.array([0.1, 0.2, 0.3]))
+    # Then the native controller receives the caller's values and mapped indices.
+    entity = native.scenes[0].entities[0]
+    np.testing.assert_array_equal(entity.kp, [1000, 500, 200])
+    np.testing.assert_array_equal(entity.kv, [100, 50, 20])
+    lower, upper, indices = entity.force_ranges[0]
+    np.testing.assert_array_equal(lower, [-10, -4, -2])
+    np.testing.assert_array_equal(upper, [10, 4, 2])
+    np.testing.assert_array_equal(indices, [1, 0, 2])
+    np.testing.assert_allclose(result.observation.qpos, [[0.1, 0.2, 0.3]])
     sim.close()
 
 

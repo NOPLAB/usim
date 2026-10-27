@@ -80,7 +80,12 @@ def main() -> None:
                     'robot',
                     ModelSource.from_path(robot),
                     ControlSpec(
-                        joint_names=('hinge',), position_joints=('hinge',), initial_qpos=(0.0,)
+                        joint_names=('hinge',),
+                        position_joints=('hinge',),
+                        initial_qpos=(0.0,),
+                        joint_stiffness=(100.0,),
+                        joint_damping=(10.0,),
+                        joint_force_limits=(10.0,),
                     ),
                     requirements=ImportRequirements(base='fixed'),
                 ),

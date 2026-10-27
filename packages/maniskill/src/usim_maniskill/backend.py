@@ -84,9 +84,12 @@ def validate_scene(scene: SceneSpec, execution: ExecutionSpec) -> None:
                     agent.control.position_joints
                     or agent.control.velocity_joints
                     or agent.control.effort_joints
+                    or agent.control.joint_stiffness is not None
+                    or agent.control.joint_damping is not None
+                    or agent.control.joint_force_limits is not None
                 ):
                     unsupported(
-                        'Registered agents retain native controller semantics; use native actions'
+                        'Registered agents own controller gains and semantics; use native actions'
                     ).require()
             case ModelSource():
                 if agent.requirements.role != 'articulation':

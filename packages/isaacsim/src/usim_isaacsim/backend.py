@@ -1,6 +1,5 @@
 """Discoverable grouped Isaac backend; engine imports begin only on open."""
 
-from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from usim.capability import (
@@ -11,7 +10,7 @@ from usim.capability import (
     SupportStatus,
 )
 from usim.model import ModelError, ModelSource
-from usim.specs import AgentSpec, ControlSpec, ExecutionSpec, RegisteredAgentRef, SceneSpec
+from usim.specs import AgentSpec, ExecutionSpec, RegisteredAgentRef, SceneSpec
 from usim_isaacsim.native_runtime import ImportRuntime
 
 if TYPE_CHECKING:
@@ -40,7 +39,6 @@ class Backend:
                     'control.velocity',
                     'control.effort',
                     'agents.direct',
-                    'agents.registered',
                     'sensors.rgb',
                     'sensors.depth',
                     'sensors.rgbd',
@@ -104,21 +102,8 @@ class Backend:
         match agent.model:
             case ModelSource():
                 return agent
-            case RegisteredAgentRef(backend='isaacsim', uid='CRANE-X7'):
-                from usim.robots.crane_x7 import CraneX7Config, get_mjcf_path
-
-                control = agent.control
-                if control == ControlSpec():
-                    control = ControlSpec(
-                        joint_names=tuple(CraneX7Config.ALL_JOINT_NAMES),
-                        position_joints=tuple(CraneX7Config.ALL_JOINT_NAMES),
-                        initial_qpos=tuple(CraneX7Config.REST_QPOS),
-                    )
-                return replace(
-                    agent, model=ModelSource.from_path(get_mjcf_path()), control=control
-                )
             case RegisteredAgentRef():
-                raise ModelError('Isaac registered agents support only isaacsim/CRANE-X7')
+                raise ModelError('Isaac requires an externally supplied ModelSource')
 
     def open(self, scene: SceneSpec, execution: ExecutionSpec = ExecutionSpec()) -> 'Session':
         from usim_isaacsim.session import Session
@@ -142,7 +127,5 @@ class Backend:
             ):
                 raise ModelError('Declare matching camera SensorSpecs for RGB-D observations')
         if execution.native_task != 'JointControl':
-            raise ModelError(
-                'Use the legacy episode adapter for native task-specific environments'
-            )
+            raise ModelError('Grouped Isaac supports only JointControl')
         return Session(self, scene, execution)

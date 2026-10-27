@@ -2,8 +2,6 @@
 
 import subprocess
 import sys
-from pathlib import Path
-from xml.etree import ElementTree
 
 import numpy as np
 import pytest
@@ -21,7 +19,12 @@ from usim.cli import build_parser
         {'n_envs': 0},
         {'max_episode_steps': -1},
         {'robot_init_qpos_noise': -0.01},
-        {'gripper_force_limit': float('inf')},
+        {'joint_names': ('joint',), 'joint_force_limits': (float('inf'),)},
+        {'joint_names': ('joint',), 'joint_force_limits': (0,)},
+        {'joint_names': ('joint',), 'joint_stiffness': (-1,)},
+        {'joint_names': ('joint',), 'joint_damping': (float('nan'),)},
+        {'joint_names': ('joint',), 'joint_stiffness': (1, 2)},
+        {'joint_force_limits': (1,)},
         {'arm_joint_names': ('joint',), 'gripper_joint_names': ('joint',)},
         {'arm_joint_names': ('',)},
         {'robot_path': 'missing-robot.xml'},
@@ -135,17 +138,20 @@ def test_mixed_joint_commands_reject_competing_control_targets():
         JointCommand(positions={'wheel': 0.1}, velocities={'wheel': 1.0})
 
 
-def test_bundled_robot_model_resolves_every_mesh_without_consumer_checkout():
-    # Given the model resolved by the installed simulator package.
-    from usim.robots.crane_x7 import get_mjcf_path
-
-    model = Path(get_mjcf_path())
-    # When the model's native asset references are resolved.
-    tree = ElementTree.parse(model)
-    compiler = tree.find('compiler')
-    assert compiler is not None
-    mesh_directory = model.parent / compiler.attrib.get('meshdir', '')
-    meshes = [mesh_directory / mesh.attrib['file'] for mesh in tree.findall('asset/mesh')]
-    # Then every mesh required to construct the robot is packaged with it.
-    assert meshes
-    assert all(mesh.is_file() and mesh.stat().st_size > 0 for mesh in meshes)
+def test_external_robot_configuration_has_no_registered_robot_default(tmp_path):
+    # Given a caller-owned model and explicitly ordered controller settings.
+    model = tmp_path / 'robot.urdf'
+    model.write_text('<robot name="external"/>')
+    # When configuring a file-backed robot without a registry identifier.
+    config = SimulatorConfig(
+        env_id='JointControl',
+        robot_path=str(model),
+        joint_names=('hinge',),
+        joint_stiffness=(100.0,),
+        joint_damping=(10.0,),
+        joint_force_limits=(5.0,),
+    )
+    # Then file-backed execution does not select an implicit built-in robot.
+    assert config.robot_uid == ''
+    assert config.robot_path == str(model)
+    assert config.joint_force_limits == (5.0,)

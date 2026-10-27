@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 
 
 def frame_robot(camera: Any, bounds: NDArray[np.float32 | np.float64]) -> None:
-    """Frame external models from native bounds rather than CRANE workspace coordinates."""
+    """Frame caller-supplied models from their native bounds."""
     lower = bounds[:, 0].min(axis=0)
     upper = bounds[:, 1].max(axis=0)
     center = (lower + upper) / 2

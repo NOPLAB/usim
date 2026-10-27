@@ -209,9 +209,11 @@ class NativeScene:
 @dataclass(frozen=True, slots=True)
 class ControllerConfig:
     names: list[str]
+    parameters: dict
 
     def __init__(self, names, **kwargs):
         object.__setattr__(self, 'names', names)
+        object.__setattr__(self, 'parameters', kwargs)
 
 
 class SubController:

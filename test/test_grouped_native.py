@@ -110,7 +110,12 @@ def test_real_model_import_and_named_control(tmp_path, format_name):
                 'robot',
                 ModelSource.from_path(path),
                 ControlSpec(
-                    joint_names=('hinge',), position_joints=('hinge',), initial_qpos=(0.0,)
+                    joint_names=('hinge',),
+                    position_joints=('hinge',),
+                    initial_qpos=(0.0,),
+                    joint_stiffness=(100.0,),
+                    joint_damping=(10.0,),
+                    joint_force_limits=(10.0,),
                 ),
                 requirements=requirements,
             ),

@@ -1,5 +1,6 @@
 """Deterministic adapter contracts without loading SAPIEN or robot assets."""
 
+import builtins
 import sys
 from importlib import import_module
 from types import ModuleType, SimpleNamespace
@@ -88,12 +89,15 @@ class FakeEnv:
 
 @pytest.fixture
 def make_env(monkeypatch):
-    monkeypatch.setitem(sys.modules, 'mani_skill', ModuleType('mani_skill'))
-    monkeypatch.setitem(sys.modules, 'mani_skill.envs', ModuleType('mani_skill.envs'))
     made = []
+    module = ModuleType('mani_skill')
+    envs = ModuleType('mani_skill.envs')
+    setattr(module, 'envs', envs)
+    monkeypatch.setitem(sys.modules, 'mani_skill', module)
+    monkeypatch.setitem(sys.modules, 'mani_skill.envs', envs)
 
     def make(env_id, **kwargs):
-        assert env_id == 'PickCube-v1' or env_id.startswith('PickPlace-CRANE-X7')
+        assert env_id in ('PickCube-v1', 'ExternalTask-v1')
         env = FakeEnv(kwargs)
         made.append(env)
         return env
@@ -201,7 +205,6 @@ def test_unknown_joint_closes_constructed_environment(make_env):
     [
         ({'n_envs': 2}, 'requires'),
         ({'sim_rate': 29.5}, 'integer'),
-        ({'gripper_force_limit': 1}, 'Force overrides'),
         ({'initial_qpos': (0.0,)}, 'reported joints'),
     ],
 )
@@ -212,11 +215,14 @@ def test_unsupported_configs_are_explicit(make_env, kwargs, message):
         assert make_env[0].closed == 1
 
 
-def test_robot_path_rejected_before_loading_environment(make_env, tmp_path):
+def test_registered_agent_rejects_ignored_robot_path(make_env, tmp_path):
+    # Given a model path alongside a registered robot identifier.
     path = tmp_path / 'robot.urdf'
     path.touch()
-    with pytest.raises(ValueError, match='register a ManiSkill agent'):
+    # When requesting a path through the registered-agent adapter.
+    with pytest.raises(ValueError, match='grouped ModelSource'):
         ManiSkillSimulator(config(robot_path=str(path)))
+    # Then no environment silently ignores the external model.
     assert not make_env
 
 
@@ -313,37 +319,36 @@ def test_initial_qpos_syncs_gpu_kinematics_before_controller_reset(make_env, mon
     sim.close()
 
 
-@pytest.mark.parametrize('visual_domain', [False, True])
-def test_crane_force_camera_and_visual_domain_settings_are_preserved(
-    make_env, monkeypatch, visual_domain
-):
-    class CraneAgent:
-        arm_force_limit = 0
-        gripper_force_limit = 0
+def test_external_registration_needs_no_implicit_robot_import(make_env, monkeypatch):
+    original_import = builtins.__import__
 
-    class PickPlace:
-        use_scene_camera = False
+    def guarded_import(name, *args, **kwargs):
+        if name.startswith(('usim.robots', 'usim_maniskill.agent')):
+            raise AssertionError(f'Unexpected registration import: {name}')
+        return original_import(name, *args, **kwargs)
 
-    agent_module = ModuleType('usim_maniskill.agent')
-    agent_module.CraneX7 = CraneAgent
-    env_module = ModuleType('usim_maniskill.environments')
-    env_module.PickPlace = PickPlace
-    monkeypatch.setitem(sys.modules, 'usim_maniskill.agent', agent_module)
-    monkeypatch.setitem(sys.modules, 'usim_maniskill.environments', env_module)
-    env_id = 'PickPlace-CRANE-X7-visual-domain' if visual_domain else 'PickPlace-CRANE-X7'
+    monkeypatch.setattr(builtins, '__import__', guarded_import)
     sim = ManiSkillSimulator(
         SimulatorConfig(
-            env_id=env_id,
-            camera_uid='scene_camera',
+            env_id='ExternalTask-v1',
+            robot_uid='external_robot',
             obs_mode='state',
-            robot_init_qpos_noise=0.05,
-            actuator_profile='servo_envelope',
-            gripper_force_limit=3.0,
         )
     )
-    assert CraneAgent.arm_force_limit == (10.0, 10.0, 4.0, 4.0, 4.0, 4.0, 4.0)
-    assert CraneAgent.gripper_force_limit == 3.0
-    assert make_env[0].kwargs['robot_init_qpos_noise'] == 0.05
-    assert make_env[0].kwargs['robot_uids'] == 'CRANE-X7'
-    assert PickPlace.use_scene_camera is (not visual_domain)
+    assert make_env[0].kwargs['robot_uids'] == 'external_robot'
     sim.close()
+
+
+def test_registered_agent_requires_explicit_uid(make_env):
+    with pytest.raises(ValueError, match='explicit robot_uid'):
+        ManiSkillSimulator(SimulatorConfig(env_id='JointControl'))
+    assert not make_env
+
+
+@pytest.mark.parametrize('field', ['joint_stiffness', 'joint_damping', 'joint_force_limits'])
+def test_registered_agent_rejects_injected_gains_before_loading(make_env, field):
+    with pytest.raises(ValueError, match='own their controller gains'):
+        ManiSkillSimulator(
+            config(joint_names=('finger', 'shoulder', 'elbow'), **{field: (1.0, 2.0, 3.0)})
+        )
+    assert not make_env

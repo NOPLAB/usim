@@ -10,10 +10,11 @@ from usim_genesis import GenesisSimulator
 
 
 @pytest.mark.skipif(os.environ.get('USIM_GENESIS_NATIVE') != '1', reason='Native smoke is opt-in')
-@pytest.mark.parametrize('robot', ['mjcf', 'urdf', 'mobile_arm', 'crane'])
+@pytest.mark.parametrize('robot', ['mjcf', 'urdf', 'mobile_arm'])
 def test_native_reset_action_observation_close(tmp_path, robot):
     # Given a real Genesis scene, optionally with an external one-joint robot.
-    options = {}
+    path = tmp_path / 'robot.urdf'
+    names = ('arm', 'wheel') if robot == 'mobile_arm' else ('hinge',)
     if robot == 'mjcf':
         path = tmp_path / 'robot.xml'
         path.write_text(
@@ -22,7 +23,6 @@ def test_native_reset_action_observation_close(tmp_path, robot):
             '<geom type="box" size="0.1 0.03 0.03" mass="1"/>'
             '</body></worldbody></mujoco>'
         )
-        options = {'robot_path': str(path), 'arm_joint_names': ('hinge',)}
     elif robot == 'mobile_arm':
         path = tmp_path / 'mobile_arm.urdf'
         inertia = (
@@ -45,12 +45,6 @@ def test_native_reset_action_observation_close(tmp_path, robot):
             )
             + '</robot>'
         )
-        options = {
-            'robot_path': str(path),
-            'joint_names': ('arm', 'wheel'),
-            'velocity_joint_names': ('wheel',),
-            'fixed_base': False,
-        }
     elif robot == 'urdf':
         path = tmp_path / 'robot.urdf'
         path.write_text(
@@ -63,18 +57,22 @@ def test_native_reset_action_observation_close(tmp_path, robot):
             '<origin xyz="0 0 0.5"/><axis xyz="0 0 1"/>'
             '<limit lower="-1" upper="1" effort="10" velocity="2"/></joint></robot>'
         )
-        options = {'robot_path': str(path), 'arm_joint_names': ('hinge',)}
     backend = os.environ.get('USIM_GENESIS_BACKEND', 'cpu')
     render = os.environ.get('USIM_GENESIS_RENDER', 'none')
     sim = GenesisSimulator(
         SimulatorConfig(
-            env_id='PickPlace-CRANE-X7' if robot == 'crane' else 'JointControl',
+            env_id='JointControl',
             backend=backend,
             render_mode=render,
             obs_mode='rgbd',
             robot_init_qpos_noise=0,
             n_envs=2,
-            **options,
+            robot_path=str(path),
+            joint_names=names,
+            velocity_joint_names=('wheel',) if robot == 'mobile_arm' else (),
+            fixed_base=robot != 'mobile_arm',
+            joint_stiffness=(100.0,) * len(names),
+            joint_damping=(10.0,) * len(names),
         )
     )
     try:
@@ -88,7 +86,8 @@ def test_native_reset_action_observation_close(tmp_path, robot):
                 velocities={'wheel': np.array([0.2, 0.3])},
             )
         # When applying real native actions and resetting one environment.
-        for _ in range(5):
+        result = sim.step(action)
+        for _ in range(4):
             result = sim.step(action)
         other = result.observation.qpos[1].copy()
         reset, _ = sim.reset(seed=7, env_ids=np.array([0]))

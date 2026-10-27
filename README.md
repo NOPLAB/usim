@@ -5,8 +5,9 @@
 Mobile robot and manipulator simulation with a dependency-free Python core,
 standard ROS 2 bridges, and Gazebo Classic, Isaac Sim, Genesis and ManiSkill.
 
-`usim` owns the robot-neutral interfaces, configuration, CLI and bundled
-CRANE-X7 model. Engines are separately installable workspace packages:
+`usim` owns the robot-neutral interfaces, configuration and CLI.
+Robot models, meshes, controller settings and task registrations come from callers.
+Engines are separately installable workspace packages:
 `usim_genesis`, `usim_isaacsim`, `usim_maniskill` and `usim_gazebo`.
 See [engine setup and simulation workflows](docs/engines.md).
 The [grouped runtime API](docs/grouped-runtime.md) separates model imports,
@@ -118,7 +119,7 @@ application ROS interfaces.
 
 ## Layout and smoke checks
 
-- `src/usim/`: pure contracts, factory, CLI, bridges and robot descriptions.
+- `src/usim/`: pure contracts, factory, CLI, bridges and model-loading interfaces.
 - `src/usim/bridges/`: optional standard ROS I/O.
 - `src/usim_env_pipeline/`: optional CPU point-cloud archival/reconstruction/USD pipeline.
 - `src/usim_env/`: common download/generate contracts and lazy dataset CLI.

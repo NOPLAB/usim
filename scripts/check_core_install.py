@@ -3,8 +3,7 @@
 import importlib.abc
 import json
 import sys
-from importlib.resources import files
-from xml.etree import ElementTree
+from importlib.util import find_spec
 
 
 class NativeImportGuard(importlib.abc.MetaPathFinder):
@@ -30,19 +29,14 @@ sys.meta_path.insert(0, NativeImportGuard())
 import usim  # noqa: E402
 from usim.cli import build_parser  # noqa: E402
 
-assets = files('usim').joinpath('robots/assets')
-model = ElementTree.parse(str(assets.joinpath('crane_x7.xml')))
-compiler = model.find('compiler')
-assert compiler is not None
-mesh_directory = assets.joinpath(compiler.attrib.get('meshdir', ''))
-meshes = [mesh_directory.joinpath(mesh.attrib['file']) for mesh in model.findall('asset/mesh')]
-assert meshes and all(mesh.is_file() for mesh in meshes)
+assert find_spec('usim.robots') is None
+assert usim.SimulatorConfig(env_id='JointControl').robot_uid == ''
 print(
     json.dumps(
         {
             'core': usim.__file__,
             'providers': usim.list_simulators(),
-            'packaged_meshes': len(meshes),
+            'bundled_robots': False,
         }
     )
 )

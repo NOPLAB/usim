@@ -62,7 +62,8 @@ class UsimSimNode(Node):
         self.declare_parameter('pause_service', '/usim/pause')
         self.declare_parameter('camera_frame', 'camera_link')
         self.declare_parameter('camera_uid', 'hand_camera')
-        self.declare_parameter('actuator_profile', 'legacy')
+        for name in ('joint_stiffness', 'joint_damping', 'joint_force_limits'):
+            self.declare_parameter(name, [], ParameterDescriptor(dynamic_typing=True))
         self.declare_parameter('robot_path', '')
         self.declare_parameter('robot_uid', '')
         self.declare_parameter('obs_mode', 'rgb')
@@ -109,7 +110,9 @@ class UsimSimNode(Node):
                 max_episode_steps=self.max_episode_steps,
                 robot_init_qpos_noise=self.robot_init_qpos_noise,
                 camera_uid=self.get_parameter('camera_uid').value,
-                actuator_profile=self.get_parameter('actuator_profile').value,
+                joint_stiffness=tuple(self.get_parameter('joint_stiffness').value) or None,
+                joint_damping=tuple(self.get_parameter('joint_damping').value) or None,
+                joint_force_limits=tuple(self.get_parameter('joint_force_limits').value) or None,
                 robot_path=self.get_parameter('robot_path').value or None,
                 robot_uid=self.get_parameter('robot_uid').value,
                 obs_mode=self.get_parameter('obs_mode').value,

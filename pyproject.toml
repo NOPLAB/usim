@@ -85,7 +85,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/usim", "src/usim_env", "src/usim_env_pipeline", "src/usim_env_vtc", "src/usim_env_tsudanuma"]
-artifacts = ["src/usim/robots/assets/**/*.xml", "src/usim/robots/assets/**/*.stl"]
 
 [tool.ruff]
 required-version = "==0.16.9"

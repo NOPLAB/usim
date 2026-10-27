@@ -28,10 +28,8 @@ class SimulatorConfig:
     robot_init_qpos_noise: float = 0.02
     n_envs: int = 1  # Number of parallel environments for batch parallelization
     camera_uid: str = 'hand_camera'
-    actuator_profile: str = 'legacy'
-    gripper_force_limit: float | None = None
     robot_path: str | None = None
-    robot_uid: str = 'CRANE-X7'
+    robot_uid: str = ''
     arm_joint_names: tuple[str, ...] = ()
     gripper_joint_names: tuple[str, ...] = ()
     initial_qpos: tuple[float, ...] | None = None
@@ -39,21 +37,33 @@ class SimulatorConfig:
     fixed_base: bool = True
     joint_names: tuple[str, ...] = ()
     velocity_joint_names: tuple[str, ...] = ()
+    joint_stiffness: tuple[float, ...] | None = None
+    joint_damping: tuple[float, ...] | None = None
+    joint_force_limits: tuple[float, ...] | None = None
 
     def __post_init__(self) -> None:
-        if not self.env_id.strip() or not self.robot_uid.strip():
-            raise ValueError('Environment and robot identifiers must not be empty')
+        if not self.env_id.strip():
+            raise ValueError('Environment identifier must not be empty')
         if not isfinite(self.sim_rate) or self.sim_rate <= 0:
             raise ValueError('Simulation rate must be finite and positive')
         if self.n_envs < 1 or self.max_episode_steps < 1:
             raise ValueError('Environment count and episode length must be positive')
         if not isfinite(self.robot_init_qpos_noise) or self.robot_init_qpos_noise < 0:
             raise ValueError('Joint initialization noise must be finite and nonnegative')
-        if self.gripper_force_limit is not None:
-            if not isfinite(self.gripper_force_limit) or self.gripper_force_limit <= 0:
-                raise ValueError('Gripper force limit must be finite and positive')
         components = self.arm_joint_names + self.gripper_joint_names
         names = self.joint_names or components
+        for label, values in (
+            ('stiffness', self.joint_stiffness),
+            ('damping', self.joint_damping),
+            ('force limits', self.joint_force_limits),
+        ):
+            if values is not None:
+                if not names or len(values) != len(names):
+                    raise ValueError(f'Joint {label} require an explicit matching joint order')
+                if not all(isfinite(value) and value >= 0 for value in values):
+                    raise ValueError(f'Joint {label} must be finite and nonnegative')
+                if label == 'force limits' and any(value == 0 for value in values):
+                    raise ValueError('Joint force limits must be positive')
         if len(names) != len(set(names)) or any(not name.strip() for name in names):
             raise ValueError('Joint names must be nonempty and unique')
         if len(components) != len(set(components)):

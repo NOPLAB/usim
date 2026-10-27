@@ -12,7 +12,6 @@ import numpy as np
 from usim.factory import register_simulator
 from usim.interface import EpisodeSimulator
 from usim.types import JointCommand, Observation, SimulatorConfig, StepResult
-from usim.robots.crane_x7 import CraneX7Config, get_mjcf_path
 from .camera import frame_robot, render_images
 from .config import validate_config
 from .joints import configure_joints, named_targets
@@ -20,7 +19,7 @@ from .joints import configure_joints, named_targets
 
 @register_simulator('genesis')
 class GenesisSimulator(EpisodeSimulator):
-    """Joint-space control for MJCF/URDF robots and the CRANE-X7 pick/place task."""
+    """Joint-space control for caller-supplied MJCF/URDF robots."""
 
     def __init__(self, config: SimulatorConfig):
         super().__init__(config)
@@ -30,23 +29,12 @@ class GenesisSimulator(EpisodeSimulator):
         self._scene: Any = None
         self._robot: Any = None
         self._camera: Any = None
-        self._environment: Any = None
         self._current_obs: Observation | None = None
         self._dofs_idx = np.array([], dtype=int)
         self._episode_steps = np.zeros(self._n_envs, dtype=np.int32)
         self._rng = np.random.default_rng()
-        self._crane = config.robot_path is None and config.robot_uid == 'CRANE-X7'
         self._arm_names = list(config.arm_joint_names)
         self._gripper_names = list(config.gripper_joint_names)
-        if (
-            self._crane
-            and not config.joint_names
-            and not self._arm_names
-            and not self._gripper_names
-        ):
-            self._arm_names = list(CraneX7Config.ARM_JOINT_NAMES)
-            self._gripper_names = list(CraneX7Config.GRIPPER_JOINT_NAMES)
-        self._mimic = self._crane and self.all_joint_names == CraneX7Config.ALL_JOINT_NAMES
         validate_config(config, self.all_joint_names)
         try:
             self._init_genesis()
@@ -117,17 +105,14 @@ class GenesisSimulator(EpisodeSimulator):
                 np.zeros((len(ids), len(indices))), self._dofs_idx[indices], envs_idx=ids
             )
         self._episode_steps[ids] = 0
-        info = {}
-        if self._environment is not None:
-            info.update(self._environment.reset(seed=seed, env_ids=ids))
-        if self._camera is not None and not self._crane:
+        if self._camera is not None:
             positions = self._numpy(
                 self._robot.get_vverts() if self._robot.n_vverts else self._robot.get_links_pos()
             )
             bounds = np.stack([positions.min(axis=1), positions.max(axis=1)], axis=1)
             frame_robot(self._camera, bounds)
         self._current_obs = self._convert_observation()
-        return self._current_obs, info
+        return self._current_obs, {}
 
     def step(self, action: np.ndarray | JointCommand) -> StepResult:
         """Apply mapped targets, then advance exactly one step at config.sim_rate."""
@@ -153,10 +138,6 @@ class GenesisSimulator(EpisodeSimulator):
         rewards = np.zeros(self._n_envs, dtype=np.float32)
         terminated = np.zeros(self._n_envs, dtype=bool)
         infos = [{} for _ in range(self._n_envs)]
-        if self._environment is not None:
-            rewards = self._environment.compute_reward()
-            terminated = self._environment.is_terminated()
-            infos = self._environment.get_info()
         return StepResult(
             observation=self._current_obs,
             reward=rewards,
@@ -195,7 +176,6 @@ class GenesisSimulator(EpisodeSimulator):
         finally:
             self._robot = None
             self._camera = None
-            self._environment = None
             self._current_obs = None
             self._is_running = False
 
@@ -219,7 +199,8 @@ class GenesisSimulator(EpisodeSimulator):
         )
 
     def _add_robot(self) -> None:
-        path = self.config.robot_path or get_mjcf_path()
+        assert self.config.robot_path is not None
+        path = self.config.robot_path
         if Path(path).suffix.lower() == '.urdf':
             morph = self._gs.morphs.URDF(
                 file=str(Path(path).resolve()), fixed=self.config.fixed_base
@@ -236,21 +217,9 @@ class GenesisSimulator(EpisodeSimulator):
         )
 
     def _init_environment(self) -> None:
-        if self.config.env_id == 'JointControl':
-            self._scene.add_entity(self._gs.morphs.Plane())
-            return
-        from .environments.pick_place import PickPlace
-
-        self._environment = PickPlace(
-            scene=self._scene,
-            robot=self._robot,
-            robot_init_qpos_noise=self.config.robot_init_qpos_noise,
-        )
-        self._environment.setup_scene()
+        self._scene.add_entity(self._gs.morphs.Plane())
 
     def _apply_action(self, action: np.ndarray) -> None:
-        if self._mimic and action.shape[1] == 8:
-            action = np.column_stack([action, action[:, 7]])
         if action.shape[1] != len(self._dofs_idx):
             raise ValueError(f'Action must have {len(self._dofs_idx)} mapped joint values')
         mode = self.config.control_mode
@@ -267,13 +236,9 @@ class GenesisSimulator(EpisodeSimulator):
         rgb, depth = None, None
         if self._camera is not None:
             rgb, depth = render_images(self._camera, self._n_envs, self.config.obs_mode == 'rgbd')
-        extra = {}
-        if self._environment is not None:
-            extra['env_info'] = self._environment.get_info()
         return Observation(
             rgb_image=rgb,
             depth_image=depth,
             qpos=self.get_qpos(),
             qvel=self.get_qvel(),
-            extra=extra,
         )

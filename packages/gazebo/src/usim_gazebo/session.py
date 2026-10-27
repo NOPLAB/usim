@@ -85,6 +85,17 @@ class Session:
                     unsupported(
                         'Joint-position controllers are not provided by Gazebo properties services'
                     ).require()
+                if any(
+                    value is not None
+                    for value in (
+                        agent.control.joint_stiffness,
+                        agent.control.joint_damping,
+                        agent.control.joint_force_limits,
+                    )
+                ):
+                    unsupported(
+                        'Gazebo services do not configure per-joint controller gains or limits'
+                    ).require()
                 entities.append(
                     EntitySpec(agent.name, agent.model, agent.pose, agent.requirements)
                 )

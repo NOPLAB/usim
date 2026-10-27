@@ -384,23 +384,47 @@ def test_model_first_articulation_binds_without_agent_registration(grouped):
         assert len(grouped.robots) == 1
 
 
-def test_explicit_registered_bundle_resolves_real_model_and_controller(grouped):
-    from usim.robots.crane_x7 import CraneX7Config
-
-    grouped.names = list(CraneX7Config.ALL_JOINT_NAMES)
+def test_registered_agents_require_external_model_source_before_starting_app(grouped):
     spec = SceneSpec(
         agents=(
             AgentSpec(
                 'arm',
-                RegisteredAgentRef('isaacsim', 'CRANE-X7'),
+                RegisteredAgentRef('isaacsim', 'external'),
                 requirements=ImportRequirements(preserve=frozenset({'joint_structure'})),
             ),
         )
     )
-    with Backend().open(spec) as session:
-        assert session.agents.describe('arm').model.format is ModelFormat.MJCF
-        np.testing.assert_allclose(session.state.get_qpos(), CraneX7Config.REST_QPOS)
-        assert len(grouped.imports) == 1
+    with pytest.raises(ModelError, match='ModelSource'):
+        Backend().open(spec)
+    assert not grouped.apps
+    assert (
+        Backend().assess(CapabilityRequest('agents.registered')).status
+        is SupportStatus.UNSUPPORTED
+    )
+
+
+def test_joint_controls_preserve_native_values_when_not_injected(grouped):
+    with Backend().open(robot_scene(grouped)):
+        robot = grouped.robots[0]
+        np.testing.assert_allclose(robot.kp, [0, 17, 17, 0])
+        np.testing.assert_allclose(robot.kd, [2, 2, 2, 0])
+        np.testing.assert_allclose(robot.efforts, 8)
+
+
+def test_injected_joint_controls_follow_selected_order_and_modes(grouped):
+    spec = robot_scene(grouped)
+    agent = spec.agents[0]
+    control = replace(
+        agent.control,
+        joint_stiffness=(21.0, 32.0, 43.0),
+        joint_damping=(4.0, 5.0, 6.0),
+        joint_force_limits=(7.0, 8.0, 9.0),
+    )
+    with Backend().open(replace(spec, agents=(replace(agent, control=control),))):
+        robot = grouped.robots[0]
+        np.testing.assert_allclose(robot.kp, [0, 17, 21, 0])
+        np.testing.assert_allclose(robot.kd, [5, 2, 4, 0])
+        np.testing.assert_allclose(robot.efforts, [8, 8, 7, 9])
 
 
 def test_permitted_removal_rebuilds_and_removes_native_entity(grouped):

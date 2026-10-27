@@ -27,7 +27,8 @@ robots into mobile and manipulator classes. Native engines retain their control
 spaces, task rewards and batching; arrays are not silently interpreted as a
 universal joint-position action.
 
-`usim` owns interfaces, CLI, factory, ROS bridges and bundled robot descriptions.
+`usim` owns interfaces, CLI, factory, ROS bridges and model-loading contracts.
+Robot descriptions, meshes, control profiles and task registrations belong to callers.
 `usim_genesis`, `usim_maniskill`, `usim_isaacsim` and `usim_gazebo` are independently
 installable engine distributions. Entry points advertise `usim.runners` and
 `usim.simulators`; discovery reads metadata without importing engines.

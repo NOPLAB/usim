@@ -141,6 +141,67 @@ def test_registered_controller_actions_keep_native_semantics(native):
         assert session._require().steps == 1
 
 
+def test_direct_model_controller_gains_follow_explicit_joint_order(native, sources):
+    control = ControlSpec(
+        joint_names=('shoulder', 'wheel'),
+        position_joints=('wheel', 'shoulder'),
+        joint_stiffness=(100, 200),
+        joint_damping=(10, 20),
+        joint_force_limits=(3, 4),
+    )
+    with Backend().open(SceneSpec(agents=(direct(sources[0], control=control),))) as session:
+        config = session._require().agent.controller.controllers['positions'].config
+        assert config.names == ['wheel', 'shoulder']
+        assert config.parameters['stiffness'] == [200, 100]
+        assert config.parameters['damping'] == [20, 10]
+        assert config.parameters['force_limit'] == [4, 3]
+
+
+def test_direct_velocity_controller_receives_damping_and_force_limits(native, sources):
+    control = ControlSpec(
+        joint_names=('shoulder', 'wheel'),
+        position_joints=('shoulder',),
+        velocity_joints=('wheel',),
+        joint_damping=(10, 20),
+        joint_force_limits=(3, 4),
+    )
+    with Backend().open(SceneSpec(agents=(direct(sources[0], control=control),))) as session:
+        configs = session._require().agent.controller.controllers
+        assert configs['positions'].config.parameters['damping'] == [10]
+        assert configs['positions'].config.parameters['force_limit'] == [3]
+        assert configs['velocities'].config.parameters['damping'] == [20]
+        assert configs['velocities'].config.parameters['force_limit'] == [4]
+
+
+@pytest.mark.parametrize('field', ['joint_stiffness', 'joint_damping', 'joint_force_limits'])
+def test_registered_agents_reject_gain_overrides_without_native_mutation(native, field):
+    spec = AgentSpec(
+        'robot',
+        RegisteredAgentRef('maniskill', 'registered'),
+        control=ControlSpec(joint_names=('shoulder', 'wheel'), **{field: (1, 2)}),
+    )
+    with pytest.raises(UnsupportedOperation, match='own controller gains'):
+        Backend().open(SceneSpec(agents=(spec,)))
+    assert not native[0]
+
+
+@pytest.mark.parametrize(
+    'groups, gains, message',
+    [
+        ({'velocity_joints': ('shoulder', 'wheel')}, {'joint_stiffness': (1, 2)}, 'stiffness'),
+        ({'position_joints': ('shoulder',)}, {'joint_damping': (1, 2)}, 'every joint'),
+        ({'effort_joints': ('shoulder', 'wheel')}, {'joint_force_limits': (1, 2)}, 'every joint'),
+    ],
+)
+def test_unsupported_direct_gains_reject_before_native_mutation(
+    native, sources, groups, gains, message
+):
+    control = ControlSpec(joint_names=('shoulder', 'wheel'), **groups, **gains)
+    with pytest.raises(ModelError, match=message):
+        Backend().open(SceneSpec(agents=(direct(sources[0], control=control),)))
+    assert not native[0]
+
+
 def test_typed_cameras_and_batch_targets(native, sources):
     spec = direct(
         sources[0], sensors=(SensorSpec('eye', 'rgbd', parent='arm', width=4, height=2, rate=30),)

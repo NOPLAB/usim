@@ -27,6 +27,12 @@ def _run(args: argparse.Namespace) -> dict[str, str | int | list[int]]:
         fixed_base=not args.free_base,
         joint_names=tuple(args.joint_names),
         velocity_joint_names=tuple(args.velocity_joints),
+        initial_qpos=None if args.initial_qpos is None else tuple(args.initial_qpos),
+        joint_stiffness=None if args.joint_stiffness is None else tuple(args.joint_stiffness),
+        joint_damping=None if args.joint_damping is None else tuple(args.joint_damping),
+        joint_force_limits=None
+        if args.joint_force_limits is None
+        else tuple(args.joint_force_limits),
     )
     simulator = create_simulator(args.engine, config)
     try:
@@ -54,17 +60,21 @@ def _run(args: argparse.Namespace) -> dict[str, str | int | list[int]]:
 def register(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     parser = commands.add_parser('run', help='run a native robot scene')
     parser.add_argument('--engine', choices=('genesis', 'maniskill', 'isaacsim'), required=True)
-    parser.add_argument('--env-id', default='PickPlace-CRANE-X7')
+    parser.add_argument('--env-id', default='JointControl')
     parser.add_argument('--compute', choices=('cpu', 'gpu'), default='cpu')
     parser.add_argument('--render-mode', choices=('none', 'rgb_array', 'human'), default='none')
     parser.add_argument('--obs-mode', choices=('state', 'rgb', 'rgbd'), default='state')
     parser.add_argument('--robot', type=Path)
-    parser.add_argument('--robot-uid', default='CRANE-X7')
+    parser.add_argument('--robot-uid', default='')
     parser.add_argument('--arm-joints', nargs='*', default=[])
     parser.add_argument('--gripper-joints', nargs='*', default=[])
     parser.add_argument('--num-envs', type=int, default=1)
     parser.add_argument('--joint-names', nargs='*', default=[])
     parser.add_argument('--velocity-joints', nargs='*', default=[])
+    parser.add_argument('--initial-qpos', nargs='+', type=float)
+    parser.add_argument('--joint-stiffness', nargs='+', type=float)
+    parser.add_argument('--joint-damping', nargs='+', type=float)
+    parser.add_argument('--joint-force-limits', nargs='+', type=float)
     parser.add_argument('--free-base', action='store_true')
     parser.add_argument('--action', nargs='+', type=float)
     parser.add_argument('--steps', type=int, default=0)

@@ -110,6 +110,10 @@ class NativeScene:
             self.entities[name] = replace(entry, joint_names=names, joint_indices=indices)
             controller = robot.get_articulation_controller()
             kp, kd = (np.array(values, copy=True) for values in controller.get_gains())
+            if control.joint_stiffness is not None:
+                kp[list(indices)] = control.joint_stiffness
+            if control.joint_damping is not None:
+                kd[list(indices)] = control.joint_damping
             for joint, index in zip(names, indices):
                 mode = (
                     'effort'
@@ -120,13 +124,14 @@ class NativeScene:
                 )
                 if mode != 'position':
                     kp[index] = 0.0
-                    kd[index] = 100.0
-                else:
-                    kp[index], kd[index] = 1000.0, 100.0
                 if mode == 'effort':
                     kd[index] = 0.0
                 controller.switch_dof_control_mode(dof_index=index, mode=mode)
             controller.set_gains(kps=kp, kds=kd)
+            if control.joint_force_limits is not None:
+                controller.set_max_efforts(
+                    np.asarray(control.joint_force_limits), joint_indices=np.asarray(indices)
+                )
             if control.initial_qpos is not None:
                 values = np.asarray(control.initial_qpos, dtype=float)
                 properties = robot.dof_properties

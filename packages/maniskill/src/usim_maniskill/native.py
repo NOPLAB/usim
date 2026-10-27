@@ -73,7 +73,6 @@ def create_environment(
     spec: SceneSpec, execution: ExecutionSpec, assets: Mapping[str, Asset]
 ) -> 'BaseEnv':
     """Construct either an existing native task or an unregistered generic scene."""
-    import mani_skill.envs  # noqa: F401
     from mani_skill.envs.sapien_env import BaseEnv
 
     agent_spec = spec.agents[0] if spec.agents else None
@@ -81,9 +80,6 @@ def create_environment(
     if agent_spec is not None:
         match agent_spec.model:
             case RegisteredAgentRef(uid=uid):
-                if uid == 'CRANE-X7':
-                    from usim_maniskill.agent import CraneX7  # noqa: F401
-
                 robot = uid
             case ModelSource():
                 robot = _agent_factory(agent_spec, assets[agent_spec.name])
@@ -111,8 +107,6 @@ def create_environment(
     if execution.native_task != 'JointControl':
         import gymnasium as gym
 
-        if execution.native_task.startswith('PickPlace-CRANE-X7'):
-            import usim_maniskill.environments  # noqa: F401
         env = gym.make(
             execution.native_task, max_episode_steps=execution.max_episode_steps, **kwargs
         )
