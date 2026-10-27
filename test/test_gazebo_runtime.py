@@ -11,7 +11,7 @@ from typing import Literal
 
 import pytest
 
-from usim.ports.gazebo import GazeboSimulator
+from usim_gazebo import GazeboSimulator
 from usim_gazebo.runner import load_configuration
 from usim.robot import MobileRobot, render_robot
 from usim.simulation import SimulationConfig

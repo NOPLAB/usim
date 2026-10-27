@@ -88,7 +88,7 @@ shows how to map and navigate a fetched VTC world.
 ```python
 from pathlib import Path
 from usim import SimulationConfig
-from usim.ports.gazebo import GazeboSimulator
+from usim_gazebo import GazeboSimulator
 
 GazeboSimulator().run(
     SimulationConfig(
@@ -125,7 +125,6 @@ application ROS interfaces.
 - `src/usim_env_vtc/`: VTC acquisition, source-policy adapter and map-specific processing.
 - `src/usim_env_tsudanuma/`: Tsudanuma CIT acquisition, provenance and frame policy.
 - `packages/{genesis,isaacsim,maniskill,gazebo}/`: independent engine distributions.
-- `src/usim/ports/`: lightweight public compatibility facades for existing mobile clients.
 - `examples/worlds/`: small owned SDF demonstration worlds.
 - `test/` and `scripts/`: regressions and real control/sensor smokes.
 

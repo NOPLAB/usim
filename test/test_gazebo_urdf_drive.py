@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from usim.ports.gazebo import GazeboAssetConfig
+from usim_gazebo import GazeboAssetConfig
 from usim_gazebo.assets import prepare_assets
 from usim.simulation import Ros2Config, SimulationConfig
 

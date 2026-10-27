@@ -24,7 +24,7 @@ changes do not require an image rebuild. The image supplies native dependencies.
 from pathlib import Path
 from threading import Event
 from usim.simulation import SimulationConfig, Ros2Config
-from usim.ports.gazebo import GazeboSimulator
+from usim_gazebo import GazeboSimulator
 
 stop = Event()  # Another thread may call stop.set().
 GazeboSimulator(image='usim-gazebo:local').run(
@@ -83,7 +83,7 @@ unchanged; the public core gains no ROS or middleware dependency.
 ### Lidar
 
 ```python
-from usim.ports.gazebo import GazeboLidarConfig, GazeboSimulator
+from usim_gazebo import GazeboLidarConfig, GazeboSimulator
 
 simulator = GazeboSimulator(
     'usim-gazebo:local',

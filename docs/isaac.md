@@ -90,7 +90,7 @@ the default configuration still reports two values.
 ```python
 from pathlib import Path
 from usim import SimulationConfig
-from usim.ports.isaac import IsaacSimulator
+from usim_isaacsim import IsaacSimulator
 
 IsaacSimulator().run(
     SimulationConfig(
@@ -130,7 +130,7 @@ and GPU budget. A visible viewport follows the robot in this mode. Omitting
 
 `IsaacSimulator.run` doesn't load the SDK in the calling process. It writes
 `configuration.json` into a private temporary directory, starts
-`python -u -m usim.ports.isaac.runner <configuration.json>` with the port's
+`python -u -m usim_isaacsim.runner <configuration.json>` with the backend's
 `python` interpreter, and removes the directory on exit.
 
 The worker's stdin is `DEVNULL`. On Windows, a pending pipe read blocked CRT

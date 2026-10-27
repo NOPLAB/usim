@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from usim.cli import build_parser
-from usim.ports.isaac.cli import configured
+from usim.runtime_cli import configured
 
 
 class CliTest(unittest.TestCase):

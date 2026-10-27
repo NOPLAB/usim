@@ -22,7 +22,7 @@ class Guard(importlib.abc.MetaPathFinder):
 sys.meta_path.insert(0, Guard())
 """
         code = (
-            'import usim; import usim.bridges.ros2; import usim.ports.isaac; '
+            'import usim; import usim.bridges.ros2; import usim_isaacsim; '
             'from usim.cli import build_parser; '
             "build_parser().parse_args(['simulate', '--help'])"
         )
@@ -32,9 +32,9 @@ sys.meta_path.insert(0, Guard())
         self.assertEqual(child.returncode, 0, child.stdout + child.stderr)
 
 
-class LibraryPortTest(unittest.TestCase):
+class BackendLibraryTest(unittest.TestCase):
     def test_typed_configuration_and_standalone_dispatch(self):
-        from usim.ports.isaac import IsaacSimulator, SimulationConfig, simulate
+        from usim_isaacsim import IsaacSimulator, SimulationConfig, simulate
         from usim_isaacsim.contacts import ObstacleContactLog
 
         with tempfile.TemporaryDirectory() as directory:

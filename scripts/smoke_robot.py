@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from usim.ports.gazebo import GazeboSimulator
+from usim_gazebo import GazeboSimulator
 from usim.simulation import SimulationConfig
 
 

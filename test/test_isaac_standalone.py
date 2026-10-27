@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from usim.ports.isaac import IsaacSimulator, SimulationConfig
+from usim_isaacsim import IsaacSimulator, SimulationConfig
 from usim_isaacsim.sim import _lidar_points, _lidar_ranges, _pace, _run
 from usim.simulation import Ros2Config, Velocity
 from dataclasses import replace

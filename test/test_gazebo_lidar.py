@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from usim.ports.gazebo import GazeboAssetConfig, GazeboLidarConfig
+from usim_gazebo import GazeboAssetConfig, GazeboLidarConfig
 from usim_gazebo.assets import prepare_assets
 from usim.simulation import ConfigurationError, SimulationConfig
 

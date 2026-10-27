@@ -10,7 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from usim import SimulationConfig
-from usim.ports.isaac import IsaacSimulator
+from usim_isaacsim import IsaacSimulator
 from usim_isaacsim.runner import main
 
 

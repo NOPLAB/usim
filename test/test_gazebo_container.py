@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from usim.ports.gazebo import GazeboLidarConfig, GazeboSimulator
+from usim_gazebo import GazeboLidarConfig, GazeboSimulator
 from usim.simulation import SimulationConfig
 
 

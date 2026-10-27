@@ -140,7 +140,6 @@ class GazeboSimulator:
                 'runtime.py',
                 'scene.py',
                 'specs.py',
-                'ports/__init__.py',
                 'bridges/__init__.py',
                 'bridges/ros2.py',
                 'bridges/ros_runtime.py',

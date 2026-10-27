@@ -198,7 +198,7 @@ not a native simulator input. For example, after expanding the Burger into
 ```python
 from pathlib import Path
 from usim.simulation import SimulationConfig
-from usim.ports.gazebo import GazeboSimulator
+from usim_gazebo import GazeboSimulator
 
 GazeboSimulator(image='usim-gazebo:local').run(
     SimulationConfig(

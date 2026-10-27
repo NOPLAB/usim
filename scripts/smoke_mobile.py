@@ -81,13 +81,13 @@ def main() -> None:
         max_seconds=60,
     )
     if args.backend == 'gazebo':
-        from usim.ports.gazebo import GazeboSimulator
+        from usim_gazebo import GazeboSimulator
 
         GazeboSimulator(image=args.image).smoke(config, args.out_dir)
     else:
         from dataclasses import replace
         from usim.bridges.smoke import probe
-        from usim.ports.isaac import IsaacSimulator
+        from usim_isaacsim import IsaacSimulator
 
         # Discover bundled ROS without bootstrapping Kit/Torch in the probe parent.
         sdk = find_spec('isaacsim')
