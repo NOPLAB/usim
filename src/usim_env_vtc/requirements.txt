@@ -1,3 +1,3 @@
 # CPU-only offline reconstruction environment; tooling licensed MIT.
 -r ../usim_env_pipeline/requirements.txt
-Pillow==11.3.0
+Pillow==13.0.0
