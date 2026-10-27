@@ -1,5 +1,7 @@
 # usim
 
+[![CI](https://github.com/NOPLAB/usim/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/NOPLAB/usim/actions/workflows/ci.yml)
+
 Mobile robot and manipulator simulation with a dependency-free Python core,
 standard ROS 2 bridges, and Gazebo Classic, Isaac Sim, Genesis and ManiSkill.
 
