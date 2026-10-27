@@ -20,6 +20,10 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
+      - name: Install Open3D system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends libegl1 libgl1
       - name: Check Python style
         run: |
           uv run --group dev --frozen ruff check .

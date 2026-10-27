@@ -23,6 +23,17 @@ native/USD or ManiSkill native extras; the resolver records these conflicts.
 
 ## Development and pipeline environments
 
+On Debian/Ubuntu, install Open3D's shared-library dependencies before importing
+it, including for CPU-only geometry tests:
+
+```sh
+sudo apt-get update
+sudo apt-get install --yes --no-install-recommends libegl1 libgl1
+```
+
+CI installs these libraries on its Ubuntu runner. No GPU allocation or display
+server is required for the geometry tests.
+
 From a POSIX shell or Git Bash, select a separate environment explicitly:
 
 ```sh
