@@ -15,7 +15,7 @@ usim-sim-node = "usim.bridges.simulation_ros2:main"
 [project.optional-dependencies]
 genesis = ["usim-genesis[native]==0.1.0"]
 maniskill = ["usim-maniskill[native]==0.1.0"]
-gazebo = ["usim-gazebo==0.1.0"]
+gazebo = ["usim-gazebo[state]==0.1.0"]
 usd = ["usim-isaacsim[usd]==0.1.0"]
 isaac = ["usim-isaacsim[native]==0.1.0"]
 cad = ["cadquery-ocp-novtk==7.9.3.1.1"]
@@ -63,6 +63,10 @@ conflicts = [
   [{ package = "usim-isaacsim", extra = "native" }, { extra = "pipeline" }],
   [{ package = "usim-isaacsim", extra = "usd" }, { extra = "pipeline" }],
   [{ package = "usim-isaacsim", extra = "native" }, { package = "usim-genesis", extra = "native" }],
+  [{ package = "usim-genesis", extra = "usd" }, { extra = "usd" }],
+  [{ package = "usim-genesis", extra = "usd" }, { extra = "isaac" }],
+  [{ package = "usim-genesis", extra = "usd" }, { package = "usim-isaacsim", extra = "usd" }],
+  [{ package = "usim-genesis", extra = "usd" }, { package = "usim-isaacsim", extra = "native" }],
   [{ package = "usim-isaacsim", extra = "native" }, { package = "usim-maniskill", extra = "native" }],
 ]
 

@@ -12,6 +12,9 @@ native = ["numpy>=1.26,<2", "mani-skill==3.0.1", "sapien==3.0.3"]
 [project.entry-points."usim.simulators"]
 maniskill = "usim_maniskill:ManiSkillSimulator"
 
+[project.entry-points."usim.backends"]
+maniskill = "usim_maniskill.backend:Backend"
+
 [tool.uv.sources]
 usim = { workspace = true }
 

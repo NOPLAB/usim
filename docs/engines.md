@@ -95,6 +95,12 @@ disabled. Optional settings retain `GazeboLidarConfig` defaults:
 
 ## Python API
 
+For model-first loading, composed format transports, named control groups and
+planned scene changes, see the [grouped runtime](grouped-runtime.md).
+It is additive to the episode and continuous APIs below. A real-engine smoke is
+available as `python examples/grouped_smoke.py --engine ENGINE` inside the
+matching native environment.
+
 ```python
 from usim import SimulatorConfig, create_simulator
 

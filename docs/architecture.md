@@ -1,6 +1,7 @@
 # Library, ports and ROS Bridge
 
-usim is one Python distribution. Its core has no ROS or simulator imports.
+The usim core is one dependency-free Python distribution; engines are separate
+workspace distributions. Its core has no ROS or simulator imports.
 `MobileRobot` describes primitive robot geometry; `render_robot()` produces a
 portable URDF. Runtime configuration is separate from authoring, so external
 URDFs do not need to be converted into a usim-specific model.
@@ -58,3 +59,17 @@ loaded only when requested; core imports never initialize a native engine.
 
 Application policies, evaluation protocols and robot-specific integrations
 belong to consumers, not this library.
+
+## Grouped runtime
+
+`create_backend()` discovers `usim.backends` providers without imposing another
+execution model. `SceneSpec`, `AgentSpec`, `ControlSpec`, `EntitySpec` and
+`ExecutionSpec` separate asset, placement, control and lifecycle concerns.
+Small state/control capabilities have reusable grouping implementations.
+
+`ModelIO` composes per-format loaders and directed model transports. Planning is
+content-dependent; conversion does not imply reverse conversion or semantic
+equivalence. Asset leases own converted resources. `SceneEditor` assesses an
+explicit change against the current safe point and binds plans and handles to
+the scene revision. Rebuilds require permission to start a new episode.
+See [contracts, examples and lifecycle semantics](grouped-runtime.md).

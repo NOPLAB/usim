@@ -1,4 +1,11 @@
 {
   "venvPath": ".",
-  "venv": ".venv"
+  "venv": ".venv",
+  "extraPaths": [
+    "src",
+    "packages/genesis/src",
+    "packages/isaacsim/src",
+    "packages/maniskill/src",
+    "packages/gazebo/src"
+  ]
 }

@@ -19,6 +19,9 @@ isaacsim = "usim_isaacsim.adapter:IsaacSimSimulator"
 [project.entry-points."usim.runners"]
 isaacsim = "usim_isaacsim:IsaacSimulator"
 
+[project.entry-points."usim.backends"]
+isaacsim = "usim_isaacsim.backend:Backend"
+
 [tool.uv.sources]
 usim = { workspace = true }
 

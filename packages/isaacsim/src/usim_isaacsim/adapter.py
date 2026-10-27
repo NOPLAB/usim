@@ -175,42 +175,21 @@ class IsaacSimSimulator(EpisodeSimulator):
             self._setup_camera()
 
     def _import_robot(self) -> Path:
-        from isaacsim.core.utils.extensions import enable_extension
+        from usim.model import ImportContext, ImportRequirements, ModelFormat, ModelSource
+        from usim_isaacsim.transports import import_xml
 
         assert self._assets is not None
-        if self._path.suffix.lower() == '.xml':
-            enable_extension('isaacsim.asset.importer.mjcf')
-            from isaacsim.asset.importer.mjcf import MJCFImporter, MJCFImporterConfig
-
-            config = MJCFImporterConfig(
-                mjcf_path=str(self._path),
-                usd_path=self._assets.name,
-                fix_base=self.config.fixed_base,
-                import_scene=False,
-                joint_target_type='position',
-                joint_drive_type='force',
-            )
-            result = MJCFImporter(config).import_mjcf()
-        elif self._path.suffix.lower() == '.urdf':
-            enable_extension('isaacsim.asset.importer.urdf')
-            from isaacsim.asset.importer.urdf import URDFImporter, URDFImporterConfig
-
-            config = URDFImporterConfig(
-                urdf_path=str(self._path),
-                usd_path=self._assets.name,
-                merge_fixed_joints=False,
-                fix_base=self.config.fixed_base,
-                collision_from_visuals=False,
-                joint_target_type='position',
-                joint_drive_type='force',
-            )
-            result = URDFImporter(config).import_urdf()
-        else:
-            result = self._path
-        result = Path(result)
-        if not result.is_file():
-            raise RuntimeError(f'Robot import produced no USD: {result}')
-        return result
+        formats = {'.xml': ModelFormat.MJCF, '.urdf': ModelFormat.URDF}
+        model_format = formats.get(self._path.suffix.lower())
+        if model_format is None:
+            return self._path
+        return import_xml(
+            ModelSource(self._path, model_format),
+            ImportContext(
+                Path(self._assets.name),
+                ImportRequirements(base='fixed' if self.config.fixed_base else 'floating'),
+            ),
+        )
 
     def _configure_joints(self) -> None:
         native_names = list(self._robot.dof_names)

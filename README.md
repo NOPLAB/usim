@@ -9,6 +9,9 @@ standard ROS 2 bridges, and Gazebo Classic, Isaac Sim, Genesis and ManiSkill.
 CRANE-X7 model. Engines are separately installable workspace packages:
 `usim_genesis`, `usim_isaacsim`, `usim_maniskill` and `usim_gazebo`.
 See [engine setup and simulation workflows](docs/engines.md).
+The [grouped runtime API](docs/grouped-runtime.md) separates model imports,
+controllers, agents and scene edits, and composes format loaders with directed
+model transports.
 
 ## Install and check
 

@@ -8,9 +8,13 @@ dependencies = ["usim==0.1.0"]
 
 [project.optional-dependencies]
 native = ["numpy>=1.26,<3", "genesis-world==1.4.3", "torch==2.9.1"]
+usd = ["usd-core==25.5.1"]
 
 [project.entry-points."usim.simulators"]
 genesis = "usim_genesis:GenesisSimulator"
+
+[project.entry-points."usim.backends"]
+genesis = "usim_genesis.backend:Backend"
 
 [tool.uv.sources]
 usim = { workspace = true }
