@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import assert_never
+
+from typing_extensions import assert_never
 
 import numpy as np
 from scipy.spatial import cKDTree

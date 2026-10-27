@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from enum import Enum
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING
+
+from typing_extensions import assert_never
 
 import numpy as np
 from scipy.spatial import cKDTree

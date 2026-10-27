@@ -57,7 +57,7 @@ def reconstruct(neighborhood: Neighborhood, config: MapConfig) -> Surface:
         case 'supplied':
             pass
         case unreachable:
-            from typing import assert_never
+            from typing_extensions import assert_never
 
             assert_never(unreachable)
     # Source normal fields remain untouched; orient only working plane directions.

@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import assert_never
+
+from typing_extensions import assert_never
 
 import numpy as np
 from numpy.typing import NDArray

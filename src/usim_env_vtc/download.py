@@ -45,8 +45,10 @@ def download(year: str, output_dir: Path) -> dict[str, JSONValue]:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument('years', nargs='*', choices=tuple(ASSETS), default=None)
+    parser.add_argument('years', nargs='*', metavar='{' + ','.join(ASSETS) + '}')
     args = parser.parse_args(argv)
+    if any(year not in ASSETS for year in args.years):
+        parser.error('years must be selected from ' + ', '.join(ASSETS))
     for year in args.years or ASSETS:
         print(json.dumps(download(year, args.output_dir), sort_keys=True))
     return 0

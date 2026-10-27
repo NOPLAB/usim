@@ -191,8 +191,10 @@ def download(key: str, output_dir: Path, *, progress=None) -> dict[str, JSONValu
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument('assets', nargs='*', choices=tuple(ASSETS), default=None)
+    parser.add_argument('assets', nargs='*', metavar='{' + ','.join(ASSETS) + '}')
     args = parser.parse_args(argv)
+    if any(key not in ASSETS for key in args.assets):
+        parser.error('assets must be selected from ' + ', '.join(ASSETS))
     keys = args.assets or list(ASSETS)
     needed = sum(
         ASSETS[key]['approximate_bytes']

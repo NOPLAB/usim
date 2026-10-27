@@ -9,7 +9,9 @@ open portals and perimeter facades replace the original component artwork.
 from __future__ import annotations
 
 from math import ceil, isfinite
-from typing import TYPE_CHECKING, Literal, TypeAlias, assert_never
+from typing import TYPE_CHECKING, Literal, TypeAlias
+
+from typing_extensions import assert_never
 
 from .architecture_geometry import _Recipe
 

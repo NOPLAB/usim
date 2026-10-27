@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, TypeAlias, assert_never
+from typing import Literal, TypeAlias
+
+from typing_extensions import assert_never
 
 import numpy as np
 from numpy.typing import NDArray

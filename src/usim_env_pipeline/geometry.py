@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from math import cos, pi, sin
-from typing import TYPE_CHECKING, Final, Literal, assert_never
+from typing import TYPE_CHECKING, Final, Literal
+
+from typing_extensions import assert_never
 
 if TYPE_CHECKING:
     from pxr import Usd, UsdShade

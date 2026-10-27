@@ -6,7 +6,9 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TypedDict, assert_never
+from typing import TypedDict
+
+from typing_extensions import assert_never
 
 import numpy as np
 from numpy.typing import NDArray

@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from math import cos, pi, sin
 from random import Random
-from typing import TYPE_CHECKING, Literal, assert_never
+from typing import TYPE_CHECKING, Literal
+
+from typing_extensions import assert_never
 
 if TYPE_CHECKING:
     from pxr import Gf, Usd

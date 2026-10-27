@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import math
 from pathlib import Path
-from typing import Literal, NotRequired, TypedDict
+from typing import Literal, TypedDict
 
 
 class PipelineInputError(ValueError):
@@ -72,20 +72,23 @@ class MapConfig:
             raise PipelineInputError('Unknown normal policy')
 
 
-class SourceMetadata(TypedDict):
+class _SourceMetadataRequired(TypedDict):
     points: int
     bytes: int
     fields: list[str]
     dtype: str
-    data_offset: NotRequired[int]
-    trailing_zero_bytes: NotRequired[int]
-    header: NotRequired[str]
-    sha256: NotRequired[str]
-    path: NotRequired[str]
-    official_url: NotRequired[str]
-    license: NotRequired[str]
-    attribution: NotRequired[str]
-    role: NotRequired[str]
+
+
+class SourceMetadata(_SourceMetadataRequired, total=False):
+    data_offset: int
+    trailing_zero_bytes: int
+    header: str
+    sha256: str
+    path: str
+    official_url: str
+    license: str
+    attribution: str
+    role: str
 
 
 class Counts(TypedDict):
@@ -104,15 +107,18 @@ class Counts(TypedDict):
     estimated_normal_records: int
 
 
-class RegionReport(Counts):
+class _RegionReportRequired(Counts):
     name: str
     key: list[int]
     halo_records: int
     candidate_owned: int
     min: list[float]
     max: list[float]
-    mesh_min: NotRequired[list[float]]
-    mesh_max: NotRequired[list[float]]
+
+
+class RegionReport(_RegionReportRequired, total=False):
+    mesh_min: list[float]
+    mesh_max: list[float]
 
 
 class Summary(Counts):

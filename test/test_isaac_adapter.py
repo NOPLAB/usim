@@ -1,12 +1,16 @@
 """Deterministic Isaac adapter fixtures; these do not claim GPU physics validation."""
 
 import sys
-import tomllib
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import numpy as np
 import pytest
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 from usim.types import JointCommand, SimulatorConfig
 import usim_isaacsim.adapter as adapter

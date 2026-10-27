@@ -264,6 +264,12 @@ def test_cli_downloads_selected_or_default_years(tmp_path, monkeypatch, original
     assert record['sha256'] == asset['sha256']
 
 
+def test_cli_rejects_unknown_year():
+    with pytest.raises(SystemExit) as error:
+        download.main(['unknown'])
+    assert error.value.code == 2
+
+
 def test_cli_help_uses_only_standard_library():
     result = subprocess.run(
         [sys.executable, '-S', str(SCRIPT), '--help'],

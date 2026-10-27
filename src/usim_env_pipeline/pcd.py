@@ -5,7 +5,9 @@ from __future__ import annotations
 import hashlib
 from enum import Enum
 from pathlib import Path
-from typing import Final, assert_never
+from typing import Final
+
+from typing_extensions import assert_never
 
 import numpy as np
 from numpy.typing import NDArray

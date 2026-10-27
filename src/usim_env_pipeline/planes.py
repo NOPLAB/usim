@@ -33,7 +33,10 @@ def extract_planes(
             break
         cloud = o3d.geometry.PointCloud()
         cloud.points = o3d.utility.Vector3dVector(points[remaining].astype(np.float64))
-        model, inliers = cloud.segment_plane(config.tolerance, 3, config.iterations)
+        # Adaptive stopping depends on OpenMP scheduling, even with a fixed seed.
+        model, inliers = cloud.segment_plane(
+            config.tolerance, 3, config.iterations, probability=1.0
+        )
         if len(inliers) < config.min_support:
             break
         selected = np.ones(len(remaining), dtype=bool)

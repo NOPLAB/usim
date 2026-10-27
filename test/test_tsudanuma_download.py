@@ -127,6 +127,12 @@ def test_cli_selected_map_and_stdlib_help(tmp_path, monkeypatch, capsys):
     assert result.returncode == 0, result.stderr
 
 
+def test_cli_rejects_unknown_asset():
+    with pytest.raises(SystemExit) as error:
+        download.main(['unknown'])
+    assert error.value.code == 2
+
+
 def test_ascii_original_verified_against_header_not_stale_catalog(tmp_path):
     path = tmp_path / 'map.pcd'
     header = pcd_bytes().split(b'DATA binary\n')[0] + b'DATA ascii\n'
