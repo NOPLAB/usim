@@ -60,7 +60,7 @@ def filter_source(source: Source, output: Path, config: SORConfig = DEFAULT_SOR)
     np.savez_compressed(
         root / 'decisions.npz', ids=ids, keep=result.keep, mean_distances=result.mean_distances
     )
-    retained = np.count_nonzero(result.keep)
+    retained = int(np.count_nonzero(result.keep))
     quantiles = [0.0, 0.01, 0.5, 0.9, 0.95, 0.99, 1.0]
     counts, edges = np.histogram(result.mean_distances, bins=64)
     report: FilterReport = {

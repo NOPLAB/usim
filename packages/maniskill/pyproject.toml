@@ -3,7 +3,7 @@ name = "usim-maniskill"
 version = "0.1.0"
 description = "ManiSkill engine for usim"
 license = "MIT"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.15"
 dependencies = ["usim==0.1.0"]
 
 [project.optional-dependencies]

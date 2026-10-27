@@ -11,11 +11,11 @@ PYTHONPATH=src python scripts/smoke_mobile.py --backend gazebo \
   --image usim-gazebo:local --out-dir runs/gazebo-smoke
 ```
 
-The host library is Python 3.12. Humble's `rclpy` runs under the container's
+The host library supports Python 3.10-3.14. Humble's `rclpy` runs under the container's
 Python 3.10, **not** the host interpreter. Each invocation explicitly copies
 `usim/__init__.py`, `robot.py`, `simulation.py`, package initializers, the two
 ROS bridge source modules, and the Gazebo port into a temporary read-only mount.
-It does not install the Python 3.12 wheel in the image. This also means source
+It does not install the host's wheel in the image. This also means source
 changes do not require an image rebuild. The image supplies native dependencies.
 
 ## Library use

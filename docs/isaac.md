@@ -2,6 +2,9 @@
 
 The port uses Isaac Sim 6.1.0.0 and Python 3.12. The SDK and its dependencies
 are optional; the base library and CLI help do not import them.
+The base package's Python 3.10-3.14 range does not extend the native SDK range.
+The `native` extra installs its SDK dependencies only on Python 3.12; use that
+interpreter for simulation.
 
 ## Setup
 
@@ -17,6 +20,8 @@ contains supported hardware, drivers and license terms. Set
 Standalone USD conversion can use the `usd` extra instead. The `usd` and
 `isaac` extras use incompatible NumPy versions and must not be combined.
 Select the desired extra again when switching environments.
+Standalone USD tooling on Python 3.13-3.14 selects USD 26.11 independently of
+the Python 3.12 Isaac runtime. Keep these environments separate.
 
 ## Docker
 

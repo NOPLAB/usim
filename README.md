@@ -16,10 +16,12 @@ model transports.
 
 ## Install and check
 
-The library supports Python 3.10-3.12. Isaac Sim 6.1 requires Python 3.12.
+The dependency-free core and backend base packages support Python 3.10-3.14.
+Native SDKs have narrower requirements; see the
+[Python support matrix](docs/python-support.md). Isaac Sim 6.1 remains on Python 3.12.
 
 ```sh
-uv sync --python 3.12 --group dev --frozen
+uv sync --python 3.14 --group dev --frozen
 uv run ruff check .
 uv run ruff format --check .
 uv run pytest -ra

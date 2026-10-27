@@ -53,7 +53,7 @@ State uses world-source pose, simulation timestamps, XYZW quaternion order and
 body-forward/yaw velocity. RGB and depth are asynchronous `rgb8` and metre-valued
 `32FC1`; the API does not promise matched camera/odometry frames.
 
-Gazebo Humble runs Python 3.10 in a supervised Docker runtime. The Python 3.12
+Gazebo Humble runs Python 3.10 in a supervised Docker runtime. The Python 3.10-3.14
 host exchanges configuration with it and does not load its native ROS modules.
 Isaac uses its Python 3.12 runtime and compatible ROS modules. The ROS Bridge is
 loaded only when requested; core imports never initialize a native engine.

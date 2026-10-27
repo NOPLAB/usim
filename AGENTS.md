@@ -13,7 +13,8 @@ in the same core namespace, not mobile/manipulator categories. Installed backend
 register through `usim.runners` and `usim.simulators` entry points. Do not split a
 mobile manipulator into two simulated worlds.
 
-Use Python 3.12. Run `uv sync --group dev`, `uv run ruff check .`,
+Portable library checks cover Python 3.10-3.14. Keep native SDKs in their
+separately documented Python 3.12 environments. Run `uv sync --group dev`, `uv run ruff check .`,
 `uv run ruff format --check .`, `uv run pytest -ra`, and `uv build`.
 Isaac and USD dependencies are optional and mutually exclusive; use the
 matching extra documented in `docs/isaac.md`. Keep versions pinned.

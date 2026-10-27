@@ -3,11 +3,16 @@ name = "usim-isaacsim"
 version = "0.1.0"
 description = "Isaac Sim engine for usim"
 license = "MIT"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.15"
 dependencies = ["usim==0.1.0"]
 
 [project.optional-dependencies]
-usd = ["usd-core==25.5", "numpy>=1.26,<2"]
+usd = [
+  "usd-core==25.5; python_version < '3.13'",
+  "usd-core==26.11; python_version >= '3.13'",
+  "numpy>=1.26,<2; python_version < '3.13'",
+  "numpy>=1.26,<3; python_version >= '3.13'",
+]
 native = [
   "isaacsim[all,extscache]==6.1.0.0; python_version == '3.12'",
   "numpy==2.3.1; python_version == '3.12'",

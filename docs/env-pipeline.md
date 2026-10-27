@@ -7,10 +7,10 @@ roles, license assumptions, or geographic registration built into its engine.
 
 ## Generate a map
 
-Run from the usim checkout with Python 3.12:
+Run from the usim checkout with Python 3.10-3.14 in a dedicated CPU environment:
 
 ```sh
-uv run --extra pipeline python -m usim_env_pipeline \
+uv run --python 3.14 --extra pipeline python -m usim_env_pipeline \
   --source assets/survey.pcd --output assets/survey-map \
   --license "your-data-license" --attribution "your-provider" \
   --source-url "https://example.org/survey" --frame "local survey XYZ" \
@@ -72,7 +72,10 @@ only; references do not enter primary geometry.
 Importing the package and requesting CLI help do not load the native geometry
 libraries. The core usim wheel remains dependency-free. The `pipeline` extra pins
 NumPy, SciPy, Open3D and USD in a CPU environment. It is deliberately incompatible
-with the separately pinned Isaac native/USD extras; use separate environments.
+with the separately pinned Isaac native/USD and ManiSkill native extras; use
+separate environments. Python 3.13+ selects newer NumPy, SciPy, Open3D and USD
+pins; Python 3.14 additionally selects a newer scikit-image. See the
+[Python support matrix](python-support.md).
 For an isolated interpreter, install
 `src/usim_env_pipeline/requirements.txt`. No GPU is used by generation.
 

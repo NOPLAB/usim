@@ -1,6 +1,10 @@
 # Isolated CPU-only map generation; no Isaac runtime or GPU allocation required.
-numpy==1.26.4
-scipy==1.15.3
-open3d==0.19.0
-usd-core==25.5.1
+numpy==1.26.4; python_version < '3.13'
+numpy==2.5.4; python_version >= '3.13'
+scipy==1.15.3; python_version < '3.13'
+scipy==1.18.1; python_version >= '3.13'
+open3d==0.19.0; python_version < '3.13'
+open3d==0.20.0; python_version >= '3.13'
+usd-core==25.5.1; python_version < '3.13'
+usd-core==26.11; python_version >= '3.13'
 typing-extensions==4.16.0

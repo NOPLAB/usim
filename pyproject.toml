@@ -5,7 +5,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "nop", email = "noplab90@gmail.com" }]
 description = "General-purpose robot simulation interfaces, configuration and CLI"
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<3.15"
 dependencies = []
 
 [project.scripts]
@@ -20,11 +20,16 @@ usd = ["usim-isaacsim[usd]==0.1.0"]
 isaac = ["usim-isaacsim[native]==0.1.0"]
 cad = ["cadquery-ocp-novtk==7.9.3.1.1"]
 pipeline = [
-  "numpy==1.26.4",
-  "scipy==1.15.3",
-  "open3d==0.19.0",
-  "usd-core==25.5.1",
-  "scikit-image==0.25.2",
+  "numpy==1.26.4; python_version < '3.13'",
+  "numpy==2.5.4; python_version >= '3.13'",
+  "scipy==1.15.3; python_version < '3.13'",
+  "scipy==1.18.1; python_version >= '3.13'",
+  "open3d==0.19.0; python_version < '3.13'",
+  "open3d==0.20.0; python_version >= '3.13'",
+  "usd-core==25.5.1; python_version < '3.13'",
+  "usd-core==26.11; python_version >= '3.13'",
+  "scikit-image==0.25.2; python_version < '3.14'",
+  "scikit-image==0.26.0; python_version >= '3.14'",
   "shapely==2.1.2",
   "pymeshlab==2025.7.post1",
   "matplotlib==3.10.8",
@@ -37,7 +42,8 @@ dev = [
   "pytest>=9.1,<10",
   "numpy>=1.26,<3",
   "scipy>=1.15,<2",
-  "open3d==0.19.0",
+  "open3d==0.19.0; python_version < '3.13'",
+  "open3d==0.20.0; python_version >= '3.13'",
   "anyio==4.14.2",
   "typing-extensions==4.16.0",
   "tomli==2.4.1; python_version < '3.11'",
@@ -57,6 +63,8 @@ conflicts = [
   [{ extra = "usd" }, { extra = "isaac" }],
   [{ extra = "pipeline" }, { extra = "isaac" }],
   [{ extra = "pipeline" }, { extra = "usd" }],
+  [{ extra = "pipeline" }, { extra = "maniskill" }],
+  [{ extra = "pipeline" }, { package = "usim-maniskill", extra = "native" }],
   [{ extra = "maniskill" }, { extra = "isaac" }],
   [{ extra = "genesis" }, { extra = "isaac" }],
   [{ package = "usim-isaacsim", extra = "native" }, { package = "usim-isaacsim", extra = "usd" }],

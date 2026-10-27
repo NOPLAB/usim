@@ -5,6 +5,8 @@ Use a separate Python 3.12 environment from Isaac. This adapter targets
 SAPIEN platform. Linux supports CUDA PhysX parallel environments; Windows CPU
 physics and RGBD observation have also been verified. The adapter uses CPU
 image buffers when `backend='cpu'`, avoiding unintended CUDA interop.
+Keep its NumPy <2 native environment separate from the newer Python 3.13+
+pipeline environment.
 
 ```sh
 uv venv --python 3.12 /tmp/usim-maniskill

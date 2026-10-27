@@ -1,6 +1,6 @@
 """Analytic finite-segment coverage, not segment counts or centre distances."""
 
-from dataclasses import FrozenInstanceError, asdict
+from dataclasses import FrozenInstanceError, astuple
 from itertools import permutations
 from math import cos, radians, sin, sqrt, tan
 
@@ -198,7 +198,7 @@ def test_endpoint_reversal_preserves_distance_clipping(reverse_prediction, rever
     if reverse_reference:
         reference = reference[:, ::-1]
     actual = boundary(predicted, reference)
-    assert asdict(actual) == pytest.approx(asdict(expected))
+    assert all(a == pytest.approx(b) for a, b in zip(astuple(actual), astuple(expected)))
 
 
 def test_empty_inputs_and_empty_reference_do_not_fabricate_recall():
@@ -251,7 +251,7 @@ def test_rigid_transform_preserves_lengths_clipping_duplicates_and_inputs():
     predicted.setflags(write=False)
     expected = boundary(predicted, reference)
     actual = boundary(predicted @ rotation + shift, reference @ rotation + shift)
-    assert asdict(actual) == pytest.approx(asdict(expected))
+    assert all(a == pytest.approx(b) for a, b in zip(astuple(actual), astuple(expected)))
     np.testing.assert_array_equal(predicted, original)
     assert expected.duplicate_prediction_length == 2
 

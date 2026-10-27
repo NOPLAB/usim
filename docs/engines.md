@@ -17,6 +17,10 @@ precede subsequent engine enhancements and removal of bundled robot assets.
 
 ## Installation
 
+The core and backend base packages support Python 3.10-3.14. This is separate
+from native SDK compatibility. Use the [Python support matrix](python-support.md)
+to select a development, geometry or native environment.
+
 From the workspace checkout, install one engine's native environment:
 
 ```sh
