@@ -68,7 +68,9 @@ def run(args) -> None:
     lidar_link = getattr(args, 'lidar_link', None)
     lidar_frame = getattr(args, 'lidar_frame', None)
     lidar_topic = getattr(args, 'lidar_topic', None)
-    if args.backend != 'gazebo' and (
+    backend: str = args.backend
+    backend = {'isaac': 'isaacsim'}.get(backend, backend)
+    if backend != 'gazebo' and (
         gazebo_options
         or lidar_link is not None
         or lidar_frame is not None
@@ -88,17 +90,16 @@ def run(args) -> None:
         gazebo_options['lidar'] = GazeboLidarConfig(
             link_name=lidar_link, frame_name=lidar_frame, topic=lidar_topic, **lidar_options
         )
-    if args.backend == 'gazebo':
-        runner = create_runner('gazebo', **gazebo_options)
-    else:
-        runner = create_runner(
-            'isaacsim',
+    backend_options = gazebo_options
+    if backend == 'isaacsim':
+        backend_options = dict(
             robot_prim_path=args.robot_prim_path,
             environment_prim_path=args.environment_prim_path,
             camera_prim_path=args.camera_prim_path,
             ground_name=args.ground_name,
             contact_out=args.contact_out,
         )
+    runner = create_runner(backend, **backend_options)
     if not getattr(args, 'stop_on_stdin', False):
         runner.run(configuration)
         return
@@ -199,9 +200,17 @@ def register_world(commands: argparse._SubParsersAction[argparse.ArgumentParser]
 
 
 def register(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    from usim import list_runners
+
     simulate = commands.add_parser('simulate', help='simulate a mobile robot with ROS 2')
     add_arguments(simulate)
-    simulate.add_argument('--backend', choices=('isaac', 'isaacsim', 'gazebo'), default='isaacsim')
+    simulate.add_argument(
+        '--backend',
+        type=lambda name: {'isaac': 'isaacsim'}.get(name, name),
+        choices=list_runners(),
+        default='isaacsim',
+        help='installed continuous simulator (use "run" for native episodes)',
+    )
     simulate.add_argument(
         '--stop-on-stdin', action='store_true', help='stop on a stdin stop line or EOF'
     )

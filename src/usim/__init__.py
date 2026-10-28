@@ -8,6 +8,7 @@ from usim.factory import (
     capabilities,
     create_runner,
     create_simulator,
+    list_runners,
     list_simulators,
     register_simulator,
 )
@@ -73,6 +74,7 @@ __all__ = [
     'EpisodeSimulator',
     'JointCommand',
     'create_runner',
+    'list_runners',
     'capabilities',
     'AgentSpec',
     'BackendDescription',

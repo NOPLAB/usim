@@ -105,9 +105,8 @@ def test_simulator_cli_closes_registered_simulator_on_step_failure():
     name = 'test_cli_lifecycle'
     register_simulator(name)(FailingSimulator)
     arguments = build_parser().parse_args(
-        ['run', '--engine', 'genesis', '--steps', '1', '--action', '0']
+        ['run', '--engine', name, '--steps', '1', '--action', '0']
     )
-    arguments.engine = name
     # When execution raises.
     try:
         with pytest.raises(RuntimeError, match='physics failed'):

@@ -13,12 +13,9 @@ Registrar = Callable[['argparse._SubParsersAction[argparse.ArgumentParser]'], No
 
 
 def _backends(args: argparse.Namespace) -> dict[str, list[str]]:
-    from importlib.metadata import entry_points
+    from usim import capabilities, list_runners, list_simulators
 
-    from usim.factory import capabilities
-
-    names = {entry.name for entry in entry_points(group='usim.runners')}
-    names.update(entry.name for entry in entry_points(group='usim.simulators'))
+    names = set(list_runners()) | set(list_simulators())
     return {name: sorted(capabilities(name)) for name in sorted(names)}
 
 
@@ -69,7 +66,7 @@ def _register_robot(commands: argparse._SubParsersAction[argparse.ArgumentParser
 
 
 def build_parser(registrars: Iterable[Registrar] | None = None) -> argparse.ArgumentParser:
-    """Register the built-in ports, or explicitly supplied command extensions."""
+    """Register built-in commands, or explicitly supplied command extensions."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     _register_robot(commands)

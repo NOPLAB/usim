@@ -47,6 +47,11 @@ def create_runner(name: str, **backend_options: str | Path | None) -> Simulator:
     return providers[name].load()(**backend_options)
 
 
+def list_runners() -> list[str]:
+    """List installed continuous providers without importing native engines."""
+    return sorted(_providers('usim.runners'))
+
+
 def list_simulators() -> list[str]:
     """List installed episode providers without importing or initializing engines."""
     return sorted(set(_providers('usim.simulators')) | set(_SIMULATORS))
