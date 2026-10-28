@@ -50,7 +50,7 @@ dev = [
   "anyio==4.14.2",
   "typing-extensions==4.16.0",
   "tomli==2.4.1; python_version < '3.11'",
-  "ruff==0.16.9",
+  "ruff==0.17.3",
   "usim-genesis==0.1.0",
   "usim-maniskill==0.1.0",
   "usim-isaacsim==0.1.0",
