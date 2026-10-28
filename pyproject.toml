@@ -36,7 +36,7 @@ pipeline = [
   "shapely==2.1.2",
   "pymeshlab==2025.7.post1",
   "matplotlib==3.10.8",
-  "anyio==4.14.2",
+  "anyio==4.15.1",
   "typing-extensions==4.16.0",
 ]
 
@@ -47,7 +47,7 @@ dev = [
   "scipy>=1.15,<2",
   "open3d==0.19.0; python_version < '3.13'",
   "open3d==0.20.0; python_version >= '3.13'",
-  "anyio==4.14.2",
+  "anyio==4.15.1",
   "typing-extensions==4.16.0",
   "tomli==2.4.1; python_version < '3.11'",
   "ruff==0.16.9",
