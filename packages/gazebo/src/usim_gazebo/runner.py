@@ -161,8 +161,6 @@ def run(
             ]
         )
         critical = [server] + ([display_process] if display_process else [])
-        if not config.headless:
-            critical.append(launch(['gzclient', '--verbose']))
         spawn = launch(
             [
                 'ros2',
@@ -191,6 +189,9 @@ def run(
                         raise RuntimeError(f'robot spawn failed with {spawn.returncode}')
                     spawned_at = time.monotonic()
                     print('USIM_GAZEBO_SPAWNED', flush=True)
+                    # Complete factory initialization before the GUI requests its scene.
+                    if not config.headless:
+                        critical.append(launch(['gzclient', '--verbose']))
                     if smoke_output is not None:
                         probe = launch(
                             [

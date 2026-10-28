@@ -50,6 +50,8 @@ GazeboSimulator(image='usim-gazebo:local').run(
 spawning, or a failure. `max_seconds=0` has no run-time limit. The owned
 container has a unique `usim-gazebo-...` name and contains Xvfb, gzserver,
 spawn_entity, and (for smoke) the ROS probe. Spawning must complete successfully.
+For GUI runs, gzclient starts only after successful entity spawning, so its
+initial scene request does not overlap world/robot factory initialization.
 Unexpected exits propagate as errors. Native process groups receive termination
 and then a bounded forced kill; the host always removes its container and
 staging directory. `ros=None` omits the drive and camera ROS plugins and public
