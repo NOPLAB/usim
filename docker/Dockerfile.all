@@ -1,0 +1,75 @@
+# All native SDKs, in separate Python environments. Build from the repository root.
+# Gazebo remains an external ROS worker supervised through the Docker socket.
+ARG ISAAC_SIM_IMAGE=nvcr.io/nvidia/isaac-sim:6.1.0
+FROM ${ISAAC_SIM_IMAGE}
+
+USER root
+COPY --from=ghcr.io/astral-sh/uv:0.12.7 /uv /usr/local/bin/uv
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_HTTP_TIMEOUT=300 \
+    UV_CONCURRENT_DOWNLOADS=2 \
+    UV_CONCURRENT_INSTALLS=1 \
+    UV_CONCURRENT_BUILDS=1 \
+    UV_LINK_MODE=copy \
+    PYTHONPATH="" \
+    PYTHONHOME="" \
+    UV_PYTHON_INSTALL_DIR=/opt/usim/python \
+    USIM_ROOT=/workspace/usim \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential util-linux docker.io libegl1 libgl1 libglib2.0-0 libgomp1 \
+        libsm6 libvulkan1 libxext6 libxrender1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && uv python install 3.12 \
+    && uv venv --python 3.12 --managed-python /opt/usim/core \
+    && uv venv --python 3.12 --managed-python /opt/usim/genesis \
+    && uv venv --python 3.12 --managed-python /opt/usim/maniskill \
+    && uv venv --python 3.12 --managed-python /opt/usim/bullet \
+    && uv venv --python 3.12 --managed-python /opt/usim/mujoco \
+    && uv venv --python 3.12 --managed-python /opt/usim/mujoco-warp
+
+WORKDIR /workspace/usim
+COPY pyproject.toml LICENSE /workspace/usim/
+COPY src /workspace/usim/src
+COPY packages /workspace/usim/packages
+COPY examples/worlds /workspace/usim/worlds
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /opt/usim/core/bin/python \
+        /workspace/usim /workspace/usim/packages/genesis /workspace/usim/packages/maniskill \
+        /workspace/usim/packages/isaacsim "/workspace/usim/packages/gazebo[state]" \
+        /workspace/usim/packages/bullet /workspace/usim/packages/mujoco \
+    && uv pip check --python /opt/usim/core/bin/python
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /opt/usim/genesis/bin/python \
+        /workspace/usim "/workspace/usim/packages/genesis[native]" \
+    && uv pip check --python /opt/usim/genesis/bin/python
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /opt/usim/maniskill/bin/python \
+        /workspace/usim "/workspace/usim/packages/maniskill[native]" "torch==2.9.1" \
+    && uv pip check --python /opt/usim/maniskill/bin/python
+# The official image owns Isaac's SDK and bundled Python dependencies.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    CC="flock /tmp/usim-bullet-compile.lock gcc" \
+    CXX="flock /tmp/usim-bullet-compile.lock g++" \
+    uv pip install --python /opt/usim/bullet/bin/python \
+        /workspace/usim "/workspace/usim/packages/bullet[native]" \
+    && uv pip check --python /opt/usim/bullet/bin/python
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /opt/usim/mujoco/bin/python \
+        /workspace/usim "/workspace/usim/packages/mujoco[native]" \
+    && uv pip check --python /opt/usim/mujoco/bin/python
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /opt/usim/mujoco-warp/bin/python \
+        /workspace/usim "/workspace/usim/packages/mujoco[warp]" \
+    && uv pip check --python /opt/usim/mujoco-warp/bin/python
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system --python /isaac-sim/python.sh --no-deps \
+        /workspace/usim /workspace/usim/packages/isaacsim \
+    && /opt/usim/core/bin/python -m usim.container_cli --help
+
+ENV USIM_GAZEBO_ASSET_TRANSFER=copy
+ENTRYPOINT ["/opt/usim/core/bin/python", "-m", "usim.container_cli"]
+CMD ["--help"]

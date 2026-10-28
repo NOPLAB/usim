@@ -11,7 +11,7 @@ ENV PYTHONUNBUFFERED=1 \
     USIM_ROOT=/workspace/usim
 
 WORKDIR /workspace/usim
-COPY src/usim /workspace/usim/src/usim
+COPY src /workspace/usim/src
 COPY pyproject.toml LICENSE /workspace/usim/
 COPY packages /workspace/usim/packages
 COPY examples/worlds /workspace/usim/worlds
