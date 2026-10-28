@@ -10,13 +10,13 @@ import subprocess
 import tempfile
 import threading
 import uuid
+from contextlib import ExitStack
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Final, Literal
 
-import usim
-
 from usim_gazebo.assets import GazeboAssetConfig, prepare_assets
+from usim_gazebo.staging import copy_inputs, prepare_runtime
 from usim.simulation import ConfigurationError, SimulationConfig
 
 __all__ = ['GazeboAssetConfig', 'GazeboLidarConfig', 'GazeboSimulator']
@@ -78,12 +78,21 @@ class GazeboSimulator:
         lidar: GazeboLidarConfig | None = None,
         network: str = 'host',
         fastdds_profile: Path | None = None,
+        asset_transfer: Literal['bind', 'copy'] | None = None,
     ) -> None:
         self.image = image
         self.engine = engine
         self.lidar = lidar
         self.network = network
         self.fastdds_profile = fastdds_profile
+        transfer = (
+            os.environ.get('USIM_GAZEBO_ASSET_TRANSFER', 'bind')
+            if asset_transfer is None
+            else asset_transfer
+        )
+        if transfer not in {'bind', 'copy'}:
+            raise ConfigurationError('asset_transfer')
+        self.copy_assets = transfer == 'copy'
 
     def run(self, configuration: SimulationConfig, *, stop: threading.Event | None = None) -> None:
         self._run(configuration, stop=stop)
@@ -120,39 +129,7 @@ class GazeboSimulator:
             mounts = prepare_assets(
                 configuration, directory, GazeboAssetConfig(private_topic, self.lidar)
             )
-            # Explicit small source copy, compatible with both 3.10 and 3.12.
-            # No install of the host's Python-3.12 wheel in a Humble container.
-            source = Path(usim.__file__).resolve().parent
-            runtime = directory / 'runtime' / 'usim'
-            for relative in (
-                '__init__.py',
-                'robot.py',
-                'simulation.py',
-                'interface.py',
-                'types.py',
-                'factory.py',
-                'capability.py',
-                'facets.py',
-                'groups.py',
-                'model.py',
-                'model_io.py',
-                'model_inspection.py',
-                'runtime.py',
-                'scene.py',
-                'specs.py',
-                'bridges/__init__.py',
-                'bridges/ros2.py',
-                'bridges/ros_runtime.py',
-                'bridges/smoke.py',
-            ):
-                target = runtime / relative
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(source / relative, target)
-            shutil.copytree(
-                Path(__file__).parent,
-                runtime.parent / 'usim_gazebo',
-                ignore=shutil.ignore_patterns('__pycache__'),
-            )
+            prepare_runtime(directory)
             data = asdict(configuration)
             data.update(world='/run/usim/world.sdf', robot_urdf='/run/usim/robot.urdf')
             (directory / 'config.json').write_text(
@@ -194,10 +171,17 @@ class GazeboSimulator:
                 command.extend(
                     ('--env', 'FASTRTPS_DEFAULT_PROFILES_FILE=/run/usim/fastdds_profile.xml')
                 )
-            for host, container in [(directory, '/run/usim'), *mounts]:
-                command.extend(('--mount', f'type=bind,source={host},target={container},readonly'))
+            inputs = [(directory, '/run/usim'), *mounts]
+            if not self.copy_assets:
+                for host, container in inputs:
+                    command.extend(
+                        ('--mount', f'type=bind,source={host},target={container},readonly')
+                    )
             if out_dir is not None:
-                command.extend(('--mount', f'type=bind,source={out_dir},target=/output'))
+                if self.copy_assets:
+                    inputs.append((out_dir, '/output'))
+                else:
+                    command.extend(('--mount', f'type=bind,source={out_dir},target=/output'))
             if not configuration.headless:
                 if not os.environ.get('DISPLAY'):
                     raise ValueError('GUI requires DISPLAY; use headless=True for Xvfb')
@@ -223,20 +207,30 @@ class GazeboSimulator:
             try:
                 subprocess.run(command, check=True, timeout=60)
                 created = True
-                process = subprocess.Popen([engine, 'start', '--attach', name])
-                while True:
-                    try:
-                        status = process.wait(timeout=0.1)
-                        break
-                    except subprocess.TimeoutExpired:
-                        if stop is not None and stop.is_set():
-                            subprocess.run(
-                                [engine, 'stop', '--time', '10', name], check=True, timeout=20
+                with ExitStack() as outputs:
+                    if self.copy_assets:
+                        copy_inputs(engine, name, inputs)
+                        if out_dir is not None:
+                            outputs.callback(
+                                subprocess.run,
+                                [engine, 'cp', f'{name}:/output/.', str(out_dir)],
+                                check=True,
+                                timeout=60,
                             )
-                            process.wait(timeout=20)
-                            return
-                if status:
-                    raise RuntimeError(f'Gazebo container exited with status {status}')
+                    process = subprocess.Popen([engine, 'start', '--attach', name])
+                    while True:
+                        try:
+                            status = process.wait(timeout=0.1)
+                            break
+                        except subprocess.TimeoutExpired:
+                            if stop is not None and stop.is_set():
+                                subprocess.run(
+                                    [engine, 'stop', '--time', '10', name], check=True, timeout=20
+                                )
+                                process.wait(timeout=20)
+                                return
+                    if status:
+                        raise RuntimeError(f'Gazebo container exited with status {status}')
             finally:
                 # Force-removal also kills descendants if native graceful cleanup failed.
                 # A successful create already proves ownership. Only an uncertain
