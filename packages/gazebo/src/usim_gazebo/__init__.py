@@ -32,7 +32,7 @@ _PASSTHROUGH: Final = (
 
 @dataclass(frozen=True, slots=True)
 class GazeboLidarConfig:
-    """Physical planar Gazebo ray sensor attached to an existing robot link."""
+    """Physical Gazebo ray sensor attached to an existing robot link."""
 
     link_name: str
     frame_name: str
@@ -43,6 +43,10 @@ class GazeboLidarConfig:
     max_angle: float = math.pi
     range_min: float = 0.1
     range_max: float = 10.0
+    vertical_samples: int = 1
+    min_vertical_angle: float = 0.0
+    max_vertical_angle: float = 0.0
+    output_type: Literal['LaserScan', 'PointCloud2'] = 'LaserScan'
 
     def __post_init__(self) -> None:
         for name in ('link_name', 'frame_name', 'topic'):
@@ -51,14 +55,36 @@ class GazeboLidarConfig:
                 raise ConfigurationError(f'lidar.{name}')
         if not self.topic.startswith('/') or any(char.isspace() for char in self.topic):
             raise ConfigurationError('lidar.topic')
-        for name in ('update_rate', 'min_angle', 'max_angle', 'range_min', 'range_max'):
+        for name in (
+            'update_rate',
+            'min_angle',
+            'max_angle',
+            'range_min',
+            'range_max',
+            'min_vertical_angle',
+            'max_vertical_angle',
+        ):
             if not math.isfinite(getattr(self, name)):
                 raise ConfigurationError(f'lidar.{name}')
         if self.update_rate <= 0:
             raise ConfigurationError('lidar.update_rate')
-        # bool satisfies an int annotation, so the type alone does not exclude it.
-        if isinstance(self.horizontal_samples, bool) or self.horizontal_samples < 1:
-            raise ConfigurationError('lidar.horizontal_samples')
+        for name in ('horizontal_samples', 'vertical_samples'):
+            value = getattr(self, name)
+            # bool satisfies an int annotation, but is not a ray count.
+            if type(value) is not int or value < 1:
+                raise ConfigurationError(f'lidar.{name}')
+        if self.output_type not in ('LaserScan', 'PointCloud2'):
+            raise ConfigurationError('lidar.output_type')
+        if not -math.pi / 2 <= self.min_vertical_angle <= self.max_vertical_angle <= math.pi / 2:
+            raise ConfigurationError('lidar.max_vertical_angle')
+        if self.vertical_samples == 1:
+            if self.min_vertical_angle != 0 or self.max_vertical_angle != 0:
+                raise ConfigurationError('lidar.vertical_samples')
+        else:
+            if self.min_vertical_angle == self.max_vertical_angle:
+                raise ConfigurationError('lidar.max_vertical_angle')
+            if self.output_type != 'PointCloud2':
+                raise ConfigurationError('lidar.output_type')
         if self.max_angle <= self.min_angle or self.max_angle - self.min_angle > 2 * math.pi:
             raise ConfigurationError('lidar.max_angle')
         if self.range_min <= 0:
@@ -79,12 +105,18 @@ class GazeboSimulator:
         network: str = 'host',
         fastdds_profile: Path | None = None,
         asset_transfer: Literal['bind', 'copy'] | None = None,
+        startup_timeout: float = 90.0,
+        wslg_gpu: bool = False,
     ) -> None:
         self.image = image
         self.engine = engine
         self.lidar = lidar
         self.network = network
         self.fastdds_profile = fastdds_profile
+        if not math.isfinite(startup_timeout) or startup_timeout <= 0:
+            raise ConfigurationError('startup_timeout')
+        self.startup_timeout = startup_timeout
+        self.wslg_gpu = wslg_gpu
         transfer = (
             os.environ.get('USIM_GAZEBO_ASSET_TRANSFER', 'bind')
             if asset_transfer is None
@@ -120,6 +152,8 @@ class GazeboSimulator:
     ) -> None:
         if stop is not None and stop.is_set():
             return
+        if self.wslg_gpu and configuration.headless:
+            raise ConfigurationError('wslg_gpu requires headless=False')
         name = 'usim-gazebo-' + uuid.uuid4().hex
         with tempfile.TemporaryDirectory(prefix='usim-gazebo-') as temporary:
             directory = Path(temporary)
@@ -138,6 +172,7 @@ class GazeboSimulator:
                         'configuration': data,
                         'private_topic': private_topic,
                         'smoke_output': '/output' if out_dir else None,
+                        'startup_timeout': self.startup_timeout,
                     }
                 ),
                 encoding='utf-8',
@@ -186,6 +221,20 @@ class GazeboSimulator:
                 if not os.environ.get('DISPLAY'):
                     raise ValueError('GUI requires DISPLAY; use headless=True for Xvfb')
                 command.extend(('--env', 'DISPLAY=' + os.environ['DISPLAY']))
+                if self.wslg_gpu:
+                    command.extend(
+                        (
+                            '--device',
+                            '/dev/dxg',
+                            '--mount',
+                            'type=bind,source=/usr/lib/wsl,target=/usr/lib/wsl,readonly',
+                            '--env',
+                            'LD_LIBRARY_PATH=/usr/lib/wsl/lib',
+                        )
+                    )
+                    adapter = os.environ.get('MESA_D3D12_DEFAULT_ADAPTER_NAME')
+                    if adapter is not None:
+                        command.extend(('--env', 'MESA_D3D12_DEFAULT_ADAPTER_NAME=' + adapter))
                 if Path('/tmp/.X11-unix').exists():
                     command.extend(
                         (

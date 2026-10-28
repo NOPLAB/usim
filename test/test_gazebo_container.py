@@ -221,6 +221,29 @@ def test_explicit_fastdds_profile_is_staged_without_changing_the_source(
     assert str(profile) not in container_cli.commands[0]
 
 
+def test_wslg_gpu_passes_device_libraries_and_selected_adapter(
+    config: SimulationConfig, container_cli: ContainerCli, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv('DISPLAY', 'wslg:0')
+    monkeypatch.setenv('MESA_D3D12_DEFAULT_ADAPTER_NAME', 'NVIDIA')
+    GazeboSimulator(wslg_gpu=True).run(replace(config, headless=False))
+    create = container_cli.commands[0]
+    assert create[create.index('--device') + 1] == '/dev/dxg'
+    assert 'type=bind,source=/usr/lib/wsl,target=/usr/lib/wsl,readonly' in create
+    assert 'LD_LIBRARY_PATH=/usr/lib/wsl/lib' in create
+    assert 'MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA' in create
+
+
+def test_wslg_gpu_rejects_headless_before_creating_a_container(
+    config: SimulationConfig, container_cli: ContainerCli
+) -> None:
+    from usim.simulation import ConfigurationError
+
+    with pytest.raises(ConfigurationError, match='wslg_gpu'):
+        GazeboSimulator(wslg_gpu=True).run(replace(config, headless=True))
+    assert container_cli.commands == []
+
+
 def test_missing_fastdds_profile_fails_before_any_engine_call(
     config: SimulationConfig, container_cli: ContainerCli, tmp_path: Path
 ) -> None:

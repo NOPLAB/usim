@@ -55,6 +55,12 @@ and then a bounded forced kill; the host always removes its container and
 staging directory. `ros=None` omits the drive and camera ROS plugins and public
 motor interface while still running physics and any requested camera sensor.
 
+`GazeboSimulator(startup_timeout=90.0)` bounds world loading, robot spawning,
+and the first odometry message. For a large collision world, set a larger
+finite positive deadline; the CLI forwards `--startup-timeout` to this same
+setting and the native `spawn_entity` service wait. This does not extend
+`max_seconds`, which starts after spawning.
+
 ### Container engine
 
 `GazeboSimulator(image, *, engine='docker')` drives the `docker` CLI by default.
@@ -63,6 +69,15 @@ Pass `engine='podman'` to issue the same `create`, `start --attach`, `stop`,
 `Literal['docker', 'podman']`. The image must be built or pulled with the selected engine. Podman runs use the
 same host networking, read-only bind mounts and `--init`; hosts that enforce
 SELinux labels on bind mounts were not verified.
+
+### WSLg GPU rendering
+
+For a GUI on a WSLg Docker host, `GazeboSimulator(wslg_gpu=True)` or the installed
+CLI's `--wslg-gpu` passes `/dev/dxg` and the host's `/usr/lib/wsl` libraries to
+the container. This requires `headless=False` and the existing `DISPLAY`
+connection. Missing host devices or libraries are engine errors, not a silent
+software-rendering fallback. Set `MESA_D3D12_DEFAULT_ADAPTER_NAME` to select an
+adapter, for example `NVIDIA`; the value is forwarded only in this mode.
 
 ### ROS transport configuration
 
@@ -94,7 +109,8 @@ simulator = GazeboSimulator(
 
 `GazeboLidarConfig(link_name, frame_name, topic, update_rate=10.0,
 horizontal_samples=720, min_angle=-pi, max_angle=pi, range_min=0.1,
-range_max=10.0)` adds a physical planar Gazebo `ray` sensor named `usim_lidar`
+range_max=10.0, vertical_samples=1, min_vertical_angle=0.0,
+max_vertical_angle=0.0, output_type='LaserScan')` adds a physical Gazebo `ray` sensor named `usim_lidar`
 to the temporary URDF after source plugins are stripped. The sensor is attached
 to `link_name`, which must exist in the URDF; place a dedicated link to control
 its mounting pose. With ROS enabled, a `libgazebo_ros_ray_sensor.so` plugin
@@ -105,6 +121,41 @@ relative or whitespace topics, non-finite values, a nonpositive rate, fewer than
 one sample, `max_angle <= min_angle`, a span above 2*pi, a nonpositive
 `range_min`, and `range_max <= range_min`. Range resolution is 0.01 m; no noise
 model is added. Caller URDF and world files are never modified.
+
+For a 3D cloud, select `output_type='PointCloud2'`, `vertical_samples >= 2`
+and increasing vertical bounds in radians within `[-pi/2, pi/2]`. More than
+one vertical row requires PointCloud2 so the LaserScan plugin cannot silently
+discard elevation rows. A single row requires both vertical bounds to remain
+zero; the omitted `<vertical>` element preserves existing planar behavior.
+Both sample counts must be positive integers (not booleans).
+The native ray plugin publishes `sensor_msgs/PointCloud2` directly, with
+FLOAT32 `x`, `y`, `z`, and `intensity`. XYZ comes from actual ranges and each
+ray's azimuth/elevation, not a planar scan padded with zero Z. Intensity is
+Gazebo's native return value, not calibrated reflectivity. Invalid ranges are
+omitted, so the cloud is unordered (`height=1`) and its point count can be less
+than `horizontal_samples * vertical_samples`. The selected frame must match
+the sensor link axes; its mounting transform remains caller-owned.
+
+For example, downstream code can approximate the Mid-360 nominal 360-degree
+horizontal and -7 to 52-degree vertical field of view using this generic grid:
+
+```sh
+usim simulate --backend gazebo --world room.sdf --robot-urdf robot.urdf \
+  --headless --physics-only \
+  --lidar-link livox_frame --lidar-frame livox_frame --lidar-topic /livox/lidar \
+  --lidar-output-type PointCloud2 --lidar-horizontal-samples 720 \
+  --lidar-min-angle -3.141592653589793 --lidar-max-angle 3.141592653589793 \
+  --lidar-vertical-samples 32 \
+  --lidar-min-vertical-angle -0.12217304763960307 \
+  --lidar-max-vertical-angle 0.9075712110370514
+```
+
+This uniformly sampled ray grid is not Livox's nonrepetitive scan pattern,
+per-point timing, motion distortion, or IMU stream. Row count, rate, range,
+topic and frame are caller choices, not a built-in device preset. Defaults
+remain the existing planar LaserScan. Portable tests verify generated sensor
+geometry and CLI forwarding; real Gazebo QA must verify finite, nonplanar
+returns against scene geometry and the native image's plugin version.
 
 Headless cameras use an actual Xvfb display and software OpenGL; the port never
 silently turns off cameras. Non-headless use requires a reachable `DISPLAY` and,
@@ -141,6 +192,12 @@ disabled. Every motor toggle clears stored commands; disabling publishes zero
 immediately. The gate publishes at 50 Hz, clamps to 0.4 m/s and 1 rad/s, and
 publishes zero after the shared 0.5-second wall-clock command watchdog expires.
 The motor service uses `std_srvs/SetBool`.
+The watchdog is not configurable in this port. A planner producing commands at
+1 Hz must use a downstream command publisher or velocity smoother that refreshes
+the configured command topic more frequently than every 0.5 seconds; for
+example, a 20 Hz smoother. Its own input timeout must cover the planner cadence
+and expected jitter. Connecting a 1 Hz planner directly causes zero commands
+between updates; changing lidar settings does not change that motor contract.
 
 Color and depth are real Gazebo depth-camera outputs: `sensor_msgs/Image` with
 `rgb8` and `32FC1` (metres), the configured dimensions/rate/offset, and the
@@ -171,7 +228,7 @@ native Gazebo master and default ROS topics are shared.
 ## Verification and evidence
 
 ```sh
-PYTHONPATH=src python -m pytest -q test/test_gazebo.py test/test_simulation.py
+uv run --no-sync pytest -q test/test_gazebo_lidar.py test/test_runtime_cli.py test/test_simulation.py
 ```
 
 The smoke subscribes before commanding and waits for actual odometry/image

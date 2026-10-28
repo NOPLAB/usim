@@ -79,6 +79,49 @@ def test_lidar_without_ros_keeps_ray_sensor_but_no_plugin(
     assert [sensor.get('type') for sensor in bare.iter('sensor')] == ['depth', 'ray']
 
 
+@pytest.mark.parametrize('ros_enabled', [True, False])
+def test_multiline_lidar_stages_native_cloud_sensor(
+    config: SimulationConfig, tmp_path: Path, ros_enabled: bool
+) -> None:
+    # Given a uniform 3D ray grid with a downstream-selected transport and frame.
+    lidar = GazeboLidarConfig(
+        'base_link',
+        'livox_frame',
+        '/livox/lidar',
+        horizontal_samples=720,
+        vertical_samples=32,
+        min_vertical_angle=math.radians(-7),
+        max_vertical_angle=math.radians(52),
+        output_type='PointCloud2',
+    )
+    # When assets are staged, independent of camera or ROS enablement.
+    prepare_assets(
+        replace(config, camera_enabled=False, ros=config.ros if ros_enabled else None),
+        tmp_path / 'cloud',
+        GazeboAssetConfig('/private/cloud/cmd_vel', lidar),
+    )
+    # Then all elevation rows reach the native ray plugin, not a flattened LaserScan.
+    robot = ET.parse(tmp_path / 'cloud' / 'robot.urdf').getroot()
+    sensor = robot.find("gazebo[@reference='base_link']/sensor[@name='usim_lidar']")
+    assert sensor is not None and sensor.get('type') == 'ray'
+    assert int(sensor.findtext('ray/scan/horizontal/samples', '')) == 720
+    assert float(sensor.findtext('ray/scan/horizontal/min_angle', '')) == -math.pi
+    assert float(sensor.findtext('ray/scan/horizontal/max_angle', '')) == math.pi
+    assert int(sensor.findtext('ray/scan/vertical/samples', '')) == 32
+    assert sensor.findtext('ray/scan/vertical/resolution') == '1'
+    assert float(sensor.findtext('ray/scan/vertical/min_angle', '')) == math.radians(-7)
+    assert float(sensor.findtext('ray/scan/vertical/max_angle', '')) == math.radians(52)
+    plugin = sensor.find('plugin')
+    if ros_enabled:
+        assert plugin is not None
+        assert plugin.get('filename') == 'libgazebo_ros_ray_sensor.so'
+        assert plugin.findtext('output_type') == 'sensor_msgs/PointCloud2'
+        assert plugin.findtext('frame_name') == 'livox_frame'
+        assert plugin.findtext('ros/remapping') == '~/out:=/livox/lidar'
+    else:
+        assert plugin is None
+
+
 @pytest.mark.parametrize(
     'change',
     [
@@ -90,6 +133,19 @@ def test_lidar_without_ros_keeps_ray_sensor_but_no_plugin(
         {'update_rate': math.inf},
         {'horizontal_samples': 0},
         {'horizontal_samples': True},
+        {'horizontal_samples': 2.5},
+        {'vertical_samples': 0},
+        {'vertical_samples': True},
+        {'vertical_samples': 2.5},
+        {'min_vertical_angle': math.nan},
+        {'max_vertical_angle': math.inf},
+        {'min_vertical_angle': -math.pi},
+        {'max_vertical_angle': math.pi},
+        {'min_vertical_angle': 0.2, 'max_vertical_angle': -0.2},
+        {'vertical_samples': 1, 'max_vertical_angle': 0.2},
+        {'vertical_samples': 2, 'output_type': 'PointCloud2'},
+        {'vertical_samples': 2, 'max_vertical_angle': 0.2},
+        {'output_type': 'PointCloud'},
         {'min_angle': 1.0, 'max_angle': 1.0},
         {'min_angle': -4.0, 'max_angle': 4.0},
         {'max_angle': math.nan},

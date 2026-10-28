@@ -6,7 +6,7 @@ import os
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Protocol
+from typing import Literal, Protocol
 from urllib.parse import unquote
 from urllib.request import url2pathname
 
@@ -42,6 +42,18 @@ class LidarAssetConfig(Protocol):
 
     @property
     def range_max(self) -> float: ...
+
+    @property
+    def vertical_samples(self) -> int: ...
+
+    @property
+    def min_vertical_angle(self) -> float: ...
+
+    @property
+    def max_vertical_angle(self) -> float: ...
+
+    @property
+    def output_type(self) -> Literal['LaserScan', 'PointCloud2']: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -254,11 +266,18 @@ def _lidar(robot: ET.Element, lidar: LidarAssetConfig, *, ros_enabled: bool) -> 
     ET.SubElement(sensor, 'visualize').text = 'false'
     ET.SubElement(sensor, 'update_rate').text = str(lidar.update_rate)
     ray = ET.SubElement(sensor, 'ray')
-    horizontal = ET.SubElement(ET.SubElement(ray, 'scan'), 'horizontal')
+    scan = ET.SubElement(ray, 'scan')
+    horizontal = ET.SubElement(scan, 'horizontal')
     ET.SubElement(horizontal, 'samples').text = str(lidar.horizontal_samples)
     ET.SubElement(horizontal, 'resolution').text = '1'
     ET.SubElement(horizontal, 'min_angle').text = str(lidar.min_angle)
     ET.SubElement(horizontal, 'max_angle').text = str(lidar.max_angle)
+    if lidar.vertical_samples > 1:
+        vertical = ET.SubElement(scan, 'vertical')
+        ET.SubElement(vertical, 'samples').text = str(lidar.vertical_samples)
+        ET.SubElement(vertical, 'resolution').text = '1'
+        ET.SubElement(vertical, 'min_angle').text = str(lidar.min_vertical_angle)
+        ET.SubElement(vertical, 'max_angle').text = str(lidar.max_vertical_angle)
     range_element = ET.SubElement(ray, 'range')
     ET.SubElement(range_element, 'min').text = str(lidar.range_min)
     ET.SubElement(range_element, 'max').text = str(lidar.range_max)
@@ -270,7 +289,7 @@ def _lidar(robot: ET.Element, lidar: LidarAssetConfig, *, ros_enabled: bool) -> 
         ros_element = ET.SubElement(plugin, 'ros')
         ET.SubElement(ros_element, 'namespace').text = '/'
         ET.SubElement(ros_element, 'remapping').text = f'~/out:={lidar.topic}'
-        ET.SubElement(plugin, 'output_type').text = 'sensor_msgs/LaserScan'
+        ET.SubElement(plugin, 'output_type').text = 'sensor_msgs/' + lidar.output_type
         ET.SubElement(plugin, 'frame_name').text = lidar.frame_name
 
 

@@ -15,7 +15,7 @@ from pathlib import Path
 from usim.simulation import CommandGate, Ros2Config, SimulationConfig, Velocity
 
 
-def load_configuration(path: Path) -> tuple[SimulationConfig, str, Path | None]:
+def load_configuration(path: Path) -> tuple[SimulationConfig, str, Path | None, float]:
     data = json.loads(path.read_text(encoding='utf-8'))
     fields = data['configuration']
     fields['world'] = Path(fields['world'])
@@ -27,6 +27,7 @@ def load_configuration(path: Path) -> tuple[SimulationConfig, str, Path | None]:
         SimulationConfig(**fields),
         data['private_topic'],
         Path(data['smoke_output']) if data.get('smoke_output') else None,
+        float(data['startup_timeout']),
     )
 
 
@@ -54,6 +55,7 @@ def run(
     config_path: Path,
     smoke_output: Path | None,
     stop: threading.Event,
+    startup_timeout: float = 90.0,
 ) -> None:
     import rclpy
     from geometry_msgs.msg import Twist
@@ -172,7 +174,7 @@ def run(
                 '-file',
                 str(config.robot_urdf),
                 '-timeout',
-                '60',
+                str(startup_timeout),
             ]
         )
         started = time.monotonic()
@@ -199,9 +201,13 @@ def run(
                                 str(smoke_output),
                             ]
                         )
-                elif time.monotonic() - started > 90:
+                elif time.monotonic() - started > startup_timeout:
                     raise TimeoutError('Gazebo robot spawn timed out')
-            elif ros is not None and not odometry[0] and time.monotonic() - started > 90:
+            elif (
+                ros is not None
+                and not odometry[0]
+                and time.monotonic() - started > startup_timeout
+            ):
                 raise TimeoutError('Gazebo drive did not publish odometry')
             if probe is not None and probe.poll() is not None:
                 if probe.returncode:
@@ -227,11 +233,11 @@ def run(
 
 def main() -> None:
     config_path = Path(sys.argv[1])
-    config, private_topic, output = load_configuration(config_path)
+    config, private_topic, output, startup_timeout = load_configuration(config_path)
     stop = threading.Event()
     for signum in (signal.SIGTERM, signal.SIGINT):
         signal.signal(signum, lambda *_: stop.set())
-    run(config, private_topic, config_path, output, stop)
+    run(config, private_topic, config_path, output, stop, startup_timeout)
 
 
 if __name__ == '__main__':

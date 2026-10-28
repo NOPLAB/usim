@@ -99,6 +99,56 @@ def test_lidar_defaults_remain_dataclass_owned(runner):
     assert GazeboSimulator().lidar is None
 
 
+def test_wslg_gpu_cli_option_is_forwarded_only_when_requested(runner):
+    _, factory = runner
+    args = arguments('--backend', 'gazebo', '--wslg-gpu')
+    args.handler(args)
+    factory.assert_called_once_with('gazebo', wslg_gpu=True)
+
+
+def test_wslg_gpu_requires_the_gazebo_backend(runner):
+    _, factory = runner
+    args = arguments('--backend', 'isaacsim', '--wslg-gpu')
+    with pytest.raises(ValueError, match='require --backend gazebo'):
+        args.handler(args)
+    factory.assert_not_called()
+
+
+def test_multiline_lidar_cli_forwarding(runner):
+    # Given the installed CLI's generic 3D lidar options.
+    _, factory = runner
+    args = arguments(
+        '--backend',
+        'gazebo',
+        '--lidar-link',
+        'sensor_link',
+        '--lidar-frame',
+        'livox_frame',
+        '--lidar-topic',
+        '/livox/lidar',
+        '--lidar-output-type',
+        'PointCloud2',
+        '--lidar-vertical-samples',
+        '32',
+        '--lidar-min-vertical-angle',
+        '-0.12217304763960307',
+        '--lidar-max-vertical-angle',
+        '0.9075712110370514',
+    )
+    # When the command selects the installed Gazebo runner.
+    args.handler(args)
+    # Then the backend receives all ray and transport fields without changing defaults.
+    assert factory.call_args.kwargs['lidar'] == GazeboLidarConfig(
+        'sensor_link',
+        'livox_frame',
+        '/livox/lidar',
+        vertical_samples=32,
+        min_vertical_angle=-0.12217304763960307,
+        max_vertical_angle=0.9075712110370514,
+        output_type='PointCloud2',
+    )
+
+
 @pytest.fixture
 def stdin_control(monkeypatch):
     lines = queue.Queue()
@@ -168,6 +218,9 @@ def test_supervised_return_requires_stop_only_for_indefinite_runs(
     'options',
     [
         ['--engine', 'invalid'],
+        ['--lidar-output-type', 'PointCloud2'],
+        ['--backend', 'gazebo', '--lidar-vertical-samples', '32'],
+        ['--backend', 'gazebo', '--lidar-output-type', 'PointCloud'],
         ['--backend', 'gazebo', '--lidar-link', 'base_link'],
         ['--backend', 'gazebo', '--lidar-link', 'base_link', '--lidar-frame', 'laser'],
         ['--backend', 'gazebo', '--lidar-link', 'base_link', '--lidar-topic', '/scan'],

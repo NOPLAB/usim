@@ -32,16 +32,26 @@ def test_native_config_roundtrip_and_precancel(
                 'configuration': fields,
                 'private_topic': '/private/run/cmd_vel',
                 'smoke_output': None,
+                'startup_timeout': 600,
             }
         )
     )
-    loaded, topic, output = load_configuration(path)
+    loaded, topic, output, startup_timeout = load_configuration(path)
     assert loaded == replace(config, ros=None)
     assert topic == '/private/run/cmd_vel'
     assert output is None
+    assert startup_timeout == 600
     stop = threading.Event()
     stop.set()
     GazeboSimulator(image='not-an-image').run(loaded, stop=stop)
+
+
+@pytest.mark.parametrize('seconds', [0, -1, float('nan'), float('inf')])
+def test_invalid_startup_deadline_is_rejected(seconds: float) -> None:
+    from usim.simulation import ConfigurationError
+
+    with pytest.raises(ConfigurationError, match='startup_timeout'):
+        GazeboSimulator(startup_timeout=seconds)
 
 
 @pytest.mark.skipif(

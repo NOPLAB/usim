@@ -50,7 +50,14 @@ def run(args) -> None:
     configuration = configured(args)
     gazebo_options = {
         name: getattr(args, name)
-        for name in ('engine', 'image', 'network', 'fastdds_profile')
+        for name in (
+            'engine',
+            'image',
+            'network',
+            'fastdds_profile',
+            'startup_timeout',
+            'wslg_gpu',
+        )
         if getattr(args, name, None) is not None
     }
     lidar_options = {
@@ -62,6 +69,10 @@ def run(args) -> None:
             'max_angle',
             'range_min',
             'range_max',
+            'vertical_samples',
+            'min_vertical_angle',
+            'max_vertical_angle',
+            'output_type',
         )
         if getattr(args, 'lidar_' + field, None) is not None
     }
@@ -218,11 +229,27 @@ def register(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> N
     simulate.add_argument('--image', help='Gazebo container image')
     simulate.add_argument('--network', help='Gazebo container network')
     simulate.add_argument('--fastdds-profile', type=Path, help='Gazebo Fast DDS profile')
+    simulate.add_argument(
+        '--startup-timeout', type=float, help='Gazebo startup deadline in seconds'
+    )
+    simulate.add_argument(
+        '--wslg-gpu', action='store_true', default=None, help='Gazebo GUI GPU access through WSLg'
+    )
     simulate.add_argument('--lidar-link', help='enable Gazebo lidar on this robot link')
     simulate.add_argument('--lidar-frame', help='required frame name when lidar is enabled')
     simulate.add_argument('--lidar-topic', help='required ROS topic when lidar is enabled')
-    for option in ('update-rate', 'min-angle', 'max-angle', 'range-min', 'range-max'):
+    for option in (
+        'update-rate',
+        'min-angle',
+        'max-angle',
+        'range-min',
+        'range-max',
+        'min-vertical-angle',
+        'max-vertical-angle',
+    ):
         simulate.add_argument('--lidar-' + option, type=float)
     simulate.add_argument('--lidar-horizontal-samples', type=int)
+    simulate.add_argument('--lidar-vertical-samples', type=int)
+    simulate.add_argument('--lidar-output-type', choices=('LaserScan', 'PointCloud2'))
     simulate.set_defaults(handler=run)
     register_world(commands)
