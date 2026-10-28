@@ -1,6 +1,6 @@
 # usim runtime on NVIDIA's official Isaac Sim container.
 # Build from the usim repository root.
-ARG ISAAC_SIM_IMAGE=nvcr.io/nvidia/isaac-sim:6.1.0
+ARG ISAAC_SIM_IMAGE=nvcr.io/nvidia/isaac-sim:6.2.0
 FROM ${ISAAC_SIM_IMAGE}
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.7 /uv /usr/local/bin/uv
