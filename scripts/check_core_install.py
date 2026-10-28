@@ -20,6 +20,12 @@ class NativeImportGuard(importlib.abc.MetaPathFinder):
             'usim_maniskill',
             'usim_isaacsim',
             'usim_gazebo',
+            'usim_bullet',
+            'usim_mujoco',
+            'pybullet',
+            'mujoco',
+            'mujoco_warp',
+            'warp',
         }:
             raise AssertionError(f'core unexpectedly imports engine dependency: {fullname}')
 

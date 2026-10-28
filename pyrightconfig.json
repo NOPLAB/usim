@@ -6,6 +6,8 @@
     "packages/genesis/src",
     "packages/isaacsim/src",
     "packages/maniskill/src",
-    "packages/gazebo/src"
+    "packages/gazebo/src",
+    "packages/bullet/src",
+    "packages/mujoco/src"
   ]
 }

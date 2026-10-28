@@ -1,7 +1,7 @@
 # Python support
 
-The dependency-free core and the four backend base packages support regular
-CPython 3.10-3.14. CI runs generic CPU tests, builds all five distributions and
+The dependency-free core and the six backend base packages support regular
+CPython 3.10-3.14. CI runs generic CPU tests, builds all seven distributions and
 exercises installed console commands on every version. Python 3.15 and
 free-threaded builds are not in the supported matrix.
 
@@ -15,6 +15,8 @@ free-threaded builds are not in the supported matrix.
 | ManiSkill 3.0.1 / SAPIEN 3.0.3 | Keep the verified 3.12 environment | The pinned native stack requires NumPy <2 |
 | Isaac Sim 6.1.0.0 | 3.12 | The SDK extra is conditional on Python 3.12 |
 | Gazebo Humble worker | Container Python 3.10 | The host may use 3.10-3.14; ROS modules stay in the container |
+| Bullet / MuJoCo native SDKs | Use separate Python 3.12 environments | Base-package portability is not native SDK certification |
+| MuJoCo Warp | Use a separate Python 3.12 environment with CUDA | GPU computation requires a Slurm GPU allocation |
 
 Base-package installation and fixture tests do not establish native physics,
 rendering, GPU or ROS compatibility. Native SDK pins are unchanged by the

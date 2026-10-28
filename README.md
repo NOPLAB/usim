@@ -3,12 +3,14 @@
 [![CI](https://github.com/NOPLAB/usim/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/NOPLAB/usim/actions/workflows/ci.yml)
 
 Mobile robot and manipulator simulation with a dependency-free Python core,
-standard ROS 2 bridges, and Gazebo Classic, Isaac Sim, Genesis and ManiSkill.
+standard ROS 2 bridges, and Gazebo Classic, Isaac Sim, Genesis, ManiSkill,
+Bullet, MuJoCo and MuJoCo Warp.
 
 `usim` owns the robot-neutral interfaces, configuration and CLI.
 Robot models, meshes, controller settings and task registrations come from callers.
 Engines are separately installable workspace packages:
-`usim_genesis`, `usim_isaacsim`, `usim_maniskill` and `usim_gazebo`.
+`usim_genesis`, `usim_isaacsim`, `usim_maniskill`, `usim_gazebo`,
+`usim_bullet` and `usim_mujoco`.
 See [engine setup and simulation workflows](docs/engines.md).
 The [grouped runtime API](docs/grouped-runtime.md) separates model imports,
 controllers, agents and scene edits, and composes format loaders with directed
@@ -127,7 +129,7 @@ application ROS interfaces.
 - `src/usim_env/`: common download/generate contracts and lazy dataset CLI.
 - `src/usim_env_vtc/`: VTC acquisition, source-policy adapter and map-specific processing.
 - `src/usim_env_tsudanuma/`: Tsudanuma CIT acquisition, provenance and frame policy.
-- `packages/{genesis,isaacsim,maniskill,gazebo}/`: independent engine distributions.
+- `packages/{genesis,isaacsim,maniskill,gazebo,bullet,mujoco}/`: independent engine distributions.
 - `examples/worlds/`: small owned SDF demonstration worlds.
 - `test/` and `scripts/`: regressions and real control/sensor smokes.
 

@@ -1,6 +1,6 @@
 # Engine packages and common API
 
-The workspace has five independently buildable distributions:
+The workspace has seven independently buildable distributions:
 
 | Distribution / import | Responsibility |
 | --- | --- |
@@ -9,6 +9,8 @@ The workspace has five independently buildable distributions:
 | `usim-isaacsim` / `usim_isaacsim` | Isaac continuous execution and native episodes |
 | `usim-maniskill` / `usim_maniskill` | ManiSkill model imports, externally registered agents and native controllers |
 | `usim-gazebo` / `usim_gazebo` | Supervised Gazebo execution and container staging |
+| `usim-bullet` / `usim_bullet` | Bullet native episodes and grouped model control |
+| `usim-mujoco` / `usim_mujoco` | MuJoCo CPU and MuJoCo Warp GPU episodes and grouped model control |
 
 The initial source-preservation checkpoint is recorded in
 [migration-manifest.json](migration-manifest.json). Model meshes were preserved
@@ -31,6 +33,12 @@ uv sync --python 3.12 --extra maniskill
 uv sync --python 3.12 --extra isaac
 # Gazebo executes in its documented container runtime:
 uv sync --python 3.12 --extra gazebo
+# Bullet, in its own environment:
+uv sync --python 3.12 --extra bullet
+# MuJoCo CPU, in its own environment:
+uv sync --python 3.12 --extra mujoco
+# MuJoCo Warp GPU, in its own environment:
+uv sync --python 3.12 --extra mujoco-warp
 ```
 
 Each backend's base package depends only on `usim`; its `native` extra supplies
@@ -39,6 +47,10 @@ can install `usim-genesis[native]`, `usim-maniskill[native]` or
 `usim-isaacsim[native]` rather than depending on the whole workspace.
 Isaac's Pillow/NumPy requirements conflict with Genesis and ManiSkill; do not
 combine their native environments or override native dependency bounds.
+
+Bullet and MuJoCo setup and supported controls are documented in
+[Bullet and MuJoCo](bullet-mujoco.md). The GPU provider is named `mujoco-warp`;
+it uses CUDA physics rather than GPU rendering of a CPU simulation.
 
 ## CLI
 

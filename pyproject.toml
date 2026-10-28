@@ -16,6 +16,9 @@ usim-sim-node = "usim.bridges.simulation_ros2:main"
 genesis = ["usim-genesis[native]==0.1.0"]
 maniskill = ["usim-maniskill[native]==0.1.0"]
 gazebo = ["usim-gazebo[state]==0.1.0"]
+bullet = ["usim-bullet[native]==0.1.0"]
+mujoco = ["usim-mujoco[native]==0.1.0"]
+mujoco-warp = ["usim-mujoco[warp]==0.1.0"]
 usd = ["usim-isaacsim[usd]==0.1.0"]
 isaac = ["usim-isaacsim[native]==0.1.0"]
 cad = ["cadquery-ocp-novtk==7.9.3.1.1"]
@@ -52,6 +55,8 @@ dev = [
   "usim-maniskill==0.1.0",
   "usim-isaacsim==0.1.0",
   "usim-gazebo==0.1.0",
+  "usim-bullet==0.1.0",
+  "usim-mujoco==0.1.0",
 ]
 
 [tool.uv]
@@ -67,6 +72,14 @@ conflicts = [
   [{ extra = "pipeline" }, { package = "usim-maniskill", extra = "native" }],
   [{ extra = "maniskill" }, { extra = "isaac" }],
   [{ extra = "genesis" }, { extra = "isaac" }],
+  [{ extra = "mujoco" }, { extra = "isaac" }],
+  [{ extra = "mujoco-warp" }, { extra = "isaac" }],
+  [{ extra = "mujoco" }, { package = "usim-isaacsim", extra = "native" }],
+  [{ extra = "mujoco-warp" }, { package = "usim-isaacsim", extra = "native" }],
+  [{ package = "usim-mujoco", extra = "native" }, { extra = "isaac" }],
+  [{ package = "usim-mujoco", extra = "warp" }, { extra = "isaac" }],
+  [{ package = "usim-mujoco", extra = "native" }, { package = "usim-isaacsim", extra = "native" }],
+  [{ package = "usim-mujoco", extra = "warp" }, { package = "usim-isaacsim", extra = "native" }],
   [{ package = "usim-isaacsim", extra = "native" }, { package = "usim-isaacsim", extra = "usd" }],
   [{ package = "usim-isaacsim", extra = "native" }, { extra = "pipeline" }],
   [{ package = "usim-isaacsim", extra = "usd" }, { extra = "pipeline" }],
@@ -86,6 +99,8 @@ usim-genesis = { workspace = true }
 usim-maniskill = { workspace = true }
 usim-isaacsim = { workspace = true }
 usim-gazebo = { workspace = true }
+usim-bullet = { workspace = true }
+usim-mujoco = { workspace = true }
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]
@@ -93,6 +108,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/usim", "src/usim_env", "src/usim_env_pipeline", "src/usim_env_vtc", "src/usim_env_tsudanuma"]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+  "src", "packages", "test", "scripts", "examples", "docs", "docker",
+  "README.md", "pyproject.toml", "uv.lock", "LICENSE", "AGENTS.md", "pyrightconfig.json",
+]
+exclude = ["/runs", "/assets", "/.omo", "/.venv"]
 
 [tool.ruff]
 required-version = "==0.16.9"

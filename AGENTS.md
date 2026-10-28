@@ -2,7 +2,7 @@
 
 usim is a general-purpose mobile robot and manipulator simulator.
 `src/usim/` contains simulator-independent contracts and tooling;
-`packages/{genesis,isaacsim,maniskill,gazebo}/` owns independent engine distributions;
+`packages/{genesis,isaacsim,maniskill,gazebo,bullet,mujoco}/` owns independent engine distributions;
 `src/usim/bridges/` owns configurable standard ROS interfaces. Application-specific
 policies, evaluation and inference integrations belong to downstream consumers.
 Robot models, meshes, registrations and task-specific definitions belong to callers.
