@@ -1,6 +1,6 @@
 # All native SDKs, in separate Python environments. Build from the repository root.
 # Gazebo remains an external ROS worker supervised through the Docker socket.
-ARG ISAAC_SIM_IMAGE=nvcr.io/nvidia/isaac-sim:6.1.0
+ARG ISAAC_SIM_IMAGE=nvcr.io/nvidia/isaac-sim:6.2.0
 FROM ${ISAAC_SIM_IMAGE}
 
 USER root
