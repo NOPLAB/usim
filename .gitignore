@@ -15,6 +15,10 @@ upstream/
 .uv-cache/
 .uv-python/
 
+# Agent runtime helpers; keep project plans versioned.
+.omo/*
+!.omo/plans/
+
 # ROS build products
 build/
 install/
