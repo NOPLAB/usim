@@ -11,7 +11,7 @@ setup(
         ('share/ament_index/resource_index/packages', ['resource/usim_sim']),
         ('share/usim_sim', ['package.xml']),
     ],
-    install_requires=['setuptools', 'usim==0.1.0'],
+    install_requires=['setuptools', 'usim==0.4.4'],
     zip_safe=True,
     maintainer='nop',
     maintainer_email='noplab90@gmail.com',
