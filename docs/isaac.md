@@ -188,6 +188,10 @@ preserves the imported pose. `real_time=True` limits physics advancement to wall
 time, with cancellable waits; slow frames do not skip physics steps.
 The CLI equivalents are `--initial-position X Y Z --initial-yaw R --real-time`.
 
+`IsaacSimulator(physics_dt=0.001)` selects a native physics step in seconds,
+independently of rendering and sensor cadence. The default remains `1 / 60`.
+Use the same step when comparing throughput with another engine.
+
 `lidar_enabled=True` enables instantaneous planar rays against live PhysX
 colliders, not a map approximation. `lidar_offset` is a physical translation in
 the reported body's frame; rays follow its full orientation. The defaults are
@@ -216,6 +220,28 @@ fields and sensor-data best-effort QoS. It does not create a LaserScan
 publisher, leaving downstream point-cloud filtering and scan conversion in
 control of `/scan_raw`. The matching sensor transform is published before each
 cloud unless `publish_lidar_tf=False`.
+
+### RTX point clouds
+
+`IsaacSimulator(lidar_mode='rtx')` selects GPU RTX LiDAR instead of Python
+PhysX scene queries. Configure `lidar_vertical_angles` explicitly: this mode
+publishes PointCloud2, not LaserScan. The existing default remains `physx`.
+RTX intersects rendered scene geometry; PhysX mode queries collision geometry.
+
+The RTX mode requires a full 360-degree scan and integral scan/pattern rates.
+It uses one emitter per elevation, `lidar_samples` rotary ticks per scan,
+idealized instantaneous single returns, and the configured physical mounting
+offset and full body orientation. Rotary azimuths cover the half-open interval
+`[lidar_angle_min, lidar_angle_max)` rather than duplicating the endpoint.
+No direction is synthesized from a map.
+
+Headless mode still renders the sensor product when a scan is due. Native GMO
+buffers are requested on the GPU; the official parser reads the completed
+XYZ and intensity arrays back to the host for ROS encoding. PointCloud2 contains
+float32 XYZ and intensity from the native sensor. Empty or stale scans are not republished, and 30
+consecutive captures without fresh valid data fail instead of producing a
+false successful sensor result. The owned sensor is released before SDK
+shutdown.
 
 For example, an independently named sensor frame can feed a downstream
 elevation-filter/pointcloud-to-laserscan pipeline:

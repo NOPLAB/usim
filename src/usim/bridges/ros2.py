@@ -141,9 +141,16 @@ def Bridge(
             self.scan_pub.publish(scan)
             return scan
 
-        def publish_points(self, stamp, points):
-            """Encode finite physical sensor-frame XYZ returns without ROS helper packages."""
+        def publish_points(self, stamp, points, intensities=None):
+            """Encode finite sensor-frame XYZ and optional measured intensity."""
             xyz = np.asarray(points, dtype='<f4').reshape(-1, 3)
+            names = ('x', 'y', 'z')
+            if intensities is not None:
+                intensity = np.asarray(intensities, dtype='<f4').reshape(-1)
+                if len(intensity) != len(xyz):
+                    raise ValueError('intensities must match the point count')
+                xyz = np.column_stack((xyz, intensity))
+                names += ('intensity',)
             xyz = xyz[np.isfinite(xyz).all(axis=1)]
             cloud = PointCloud2()
             cloud.header.stamp = stamp
@@ -151,10 +158,10 @@ def Bridge(
             cloud.height, cloud.width = 1, len(xyz)
             cloud.fields = [
                 PointField(name=name, offset=index * 4, datatype=PointField.FLOAT32, count=1)
-                for index, name in enumerate(('x', 'y', 'z'))
+                for index, name in enumerate(names)
             ]
             cloud.is_bigendian = False
-            cloud.point_step = 12
+            cloud.point_step = len(names) * 4
             cloud.row_step = cloud.width * cloud.point_step
             cloud.is_dense = True
             cloud.data = xyz.tobytes()

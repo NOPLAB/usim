@@ -12,9 +12,28 @@ from typing import Literal
 import pytest
 
 from usim_gazebo import GazeboSimulator
-from usim_gazebo.runner import load_configuration
+from usim_gazebo.runner import _requires_xvfb, load_configuration
 from usim.robot import MobileRobot, render_robot
 from usim.simulation import SimulationConfig
+
+
+@pytest.mark.parametrize('headless', [False, True])
+@pytest.mark.parametrize('camera', [False, True])
+@pytest.mark.parametrize('gpu_lidar', [False, True])
+@pytest.mark.parametrize('wslg', [False, True])
+def test_headless_rendering_selection(
+    config: SimulationConfig,
+    monkeypatch: pytest.MonkeyPatch,
+    headless: bool,
+    camera: bool,
+    gpu_lidar: bool,
+    wslg: bool,
+) -> None:
+    monkeypatch.setenv('USIM_GAZEBO_GPU_LIDAR', '1' if gpu_lidar else '0')
+    monkeypatch.setenv('USIM_GAZEBO_WSLG_GPU', '1' if wslg else '0')
+    assert _requires_xvfb(replace(config, headless=headless, camera_enabled=camera)) == (
+        headless and (camera or gpu_lidar) and not wslg
+    )
 
 
 @pytest.mark.parametrize('paired', [False, True])

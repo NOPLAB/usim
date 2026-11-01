@@ -39,6 +39,8 @@ def run(
                 'lidar_frame',
                 'residency_radius',
                 'preview_hz',
+                'physics_dt',
+                'lidar_mode',
             )
         }
         options['contact_out'] = str(port.contact_out.resolve()) if port.contact_out else None

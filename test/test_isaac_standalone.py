@@ -62,6 +62,14 @@ class StandaloneIsaacTest(unittest.TestCase):
     def test_point_cloud_loop_does_not_publish_a_planar_scan(self):
         self.exercise_robot(variant='points')
 
+    def test_rtx_clouds_use_single_sensor_render_and_preserve_intensity(self):
+        self.exercise_robot(variant='rtx', physics_dt=0.001)
+
+    def test_lidar_mode_defaults_and_rejects_unknown_engines(self):
+        self.assertEqual(IsaacSimulator().lidar_mode, 'physx')
+        with self.assertRaisesRegex(ValueError, 'lidar_mode'):
+            IsaacSimulator(lidar_mode='unknown')
+
     def test_pacing_uses_absolute_clock_and_bounded_cancel_wait(self):
         waits = []
         stop = NS(wait=waits.append)
@@ -134,6 +142,15 @@ class StandaloneIsaacTest(unittest.TestCase):
             with self.subTest(rate=rate), self.assertRaisesRegex(ValueError, 'preview_hz'):
                 IsaacSimulator(preview_hz=rate)
 
+    def test_custom_physics_step_reaches_native_world(self):
+        self.exercise_robot(variant='camera_ros', physics_dt=0.001)
+
+    def test_physics_step_defaults_and_invalid_values(self):
+        self.assertEqual(IsaacSimulator().physics_dt, 1 / 60)
+        for step in (0, -1, float('inf'), float('-inf'), float('nan')):
+            with self.subTest(step=step), self.assertRaisesRegex(ValueError, 'physics_dt'):
+                IsaacSimulator(physics_dt=step)
+
     def test_stale_completed_camera_frames_fail_instead_of_republishing(self):
         self.exercise_robot(variant='camera_stale')
 
@@ -148,7 +165,9 @@ class StandaloneIsaacTest(unittest.TestCase):
             with self.subTest(invalid=invalid):
                 self.exercise_robot(paired=True, invalid=invalid)
 
-    def exercise_robot(self, paired=False, invalid=None, variant=None, preview_hz=None):
+    def exercise_robot(
+        self, paired=False, invalid=None, variant=None, preview_hz=None, physics_dt=1 / 60
+    ):
         actions = []
         references = []
         imports = []
@@ -187,7 +206,7 @@ class StandaloneIsaacTest(unittest.TestCase):
                     35
                     if variant == 'camera_stale'
                     else 4
-                    if variant in ('camera_lifetime', 'camera_ros')
+                    if variant in ('camera_lifetime', 'camera_ros', 'rtx')
                     else 1
                 )
                 settings.append(configuration)
@@ -237,6 +256,9 @@ class StandaloneIsaacTest(unittest.TestCase):
             if variant in ('camera_lifetime', 'camera_ros', 'camera_stale'):
                 wall_clock[0] += 0.25
                 world.current_time += 0.25
+            if variant == 'rtx':
+                wall_clock[0] += 0.1
+                world.current_time += 0.1
             if (
                 kw['render']
                 and camera_ready.initialized
@@ -257,6 +279,7 @@ class StandaloneIsaacTest(unittest.TestCase):
             current_time=1.0,
             reset=lambda: actions.append('reset'),
             step=step_world,
+            render=lambda: actions.append('rtx_render'),
         )
         drive = NS(
             GetStiffnessAttr=lambda: NS(Set=lambda value: None),
@@ -278,6 +301,20 @@ class StandaloneIsaacTest(unittest.TestCase):
         def cast(origin, direction, distance, report):
             rays.append((origin, direction, distance))
             report(NS(collision='/World/Environment/Wall', rigid_body='', distance=2.0))
+
+        class Rtx:
+            def __init__(self, configuration, native_world):
+                assert native_world is world
+                assert configuration.lidar_vertical_angles == (0.0, np.pi / 6)
+                actions.append('rtx_created')
+
+            def capture(self, position, orientation):
+                actions.append(('rtx_capture', tuple(position), tuple(orientation)))
+                world.render()
+                return np.array([[1, 2, 3], [4, 5, 6]]), np.array([0.25, 0.5])
+
+            def close(self):
+                actions.append('rtx_closed')
 
         camera = NS(
             initialize=lambda: setattr(camera_ready, 'initialized', True),
@@ -347,6 +384,9 @@ class StandaloneIsaacTest(unittest.TestCase):
             parent, _, child = name.rpartition('.')
             if parent:
                 setattr(modules[parent], child, module)
+        rtx_module = types.ModuleType('usim_isaacsim.rtx_lidar')
+        rtx_module.__dict__['RtxLidar'] = Rtx
+        modules[rtx_module.__name__] = rtx_module
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             world_path, robot_path = root / 'room.usd', root / 'robot.urdf'
@@ -367,7 +407,7 @@ class StandaloneIsaacTest(unittest.TestCase):
             )
             if variant in ('camera_lifetime', 'camera_ros', 'camera_stale'):
                 config = replace(config, camera_hz=2.0)
-            if variant in ('navigation', 'points', 'residency'):
+            if variant in ('navigation', 'points', 'residency', 'rtx'):
                 config = replace(
                     config,
                     initial_position=(4.0, 5.0, 0.1),
@@ -376,9 +416,11 @@ class StandaloneIsaacTest(unittest.TestCase):
                     lidar_enabled=True,
                     lidar_samples=3,
                 )
-                if variant == 'points':
+                if variant in ('points', 'rtx'):
                     config = replace(config, lidar_vertical_angles=(0.0, np.pi / 6))
-            if variant in ('points', 'camera_ros'):
+            if variant == 'rtx':
+                config = replace(config, headless=True)
+            if variant in ('points', 'camera_ros', 'rtx'):
                 from test.test_isaac_runtime import runtime_modules
 
                 modules.update(runtime_modules())
@@ -401,19 +443,21 @@ class StandaloneIsaacTest(unittest.TestCase):
             with (
                 patch.dict(
                     sys.modules,
-                    modules if variant in ('points', 'camera_ros') else {**modules, 'rclpy': None},
+                    modules
+                    if variant in ('points', 'camera_ros', 'rtx')
+                    else {**modules, 'rclpy': None},
                 ),
                 patch('usim_isaacsim.sim.time.monotonic', side_effect=lambda: wall_clock[0]),
                 contextlib.redirect_stdout(output),
             ):
-                if variant in ('points', 'camera_ros'):
+                if variant in ('points', 'camera_ros', 'rtx'):
                     from usim.bridges.ros2 import Bridge
 
                     config = replace(config, ros=Ros2Config())
                     bridge = Bridge(
                         camera_enabled=variant == 'camera_ros',
-                        lidar_enabled=variant == 'points',
-                        lidar_points=variant == 'points',
+                        lidar_enabled=variant in ('points', 'rtx'),
+                        lidar_points=variant in ('points', 'rtx'),
                     )
                     bridge.destroy_node = lambda: None
                     with (
@@ -423,8 +467,29 @@ class StandaloneIsaacTest(unittest.TestCase):
                         port = IsaacSimulator(
                             robot_prim_path='/World/Custom',
                             preview_hz=30.0 if preview_hz is None else preview_hz,
+                            physics_dt=physics_dt,
+                            lidar_mode='rtx' if variant == 'rtx' else 'physx',
                         )
                         _run(config, port)
+                    if variant == 'rtx':
+                        assert bridge.points_pub is not None
+                        self.assertEqual(len(bridge.points_pub.messages), 4)
+                        self.assertEqual(bridge.points_pub.messages[0].point_step, 16)
+                        self.assertEqual(actions.count('rtx_render'), 4)
+                        self.assertEqual(rays, [])
+                        self.assertLess(actions.index('reset'), actions.index('rtx_created'))
+                        self.assertLess(actions.index('rtx_closed'), actions.index('close'))
+                        self.assertTrue(
+                            all(
+                                not item[1]['render']
+                                for item in actions
+                                if isinstance(item, tuple) and item[0] == 'step'
+                            )
+                        )
+                        result = json.loads(output.getvalue().splitlines()[-1])
+                        self.assertEqual(result['scan_frames'], 4)
+                        self.assertEqual(world_settings[0]['physics_dt'], 0.001)
+                        return
                     if variant == 'points':
                         self.assertNotIn('/scan_raw', bridge.publishers)
                         assert bridge.points_pub is not None
@@ -490,7 +555,7 @@ class StandaloneIsaacTest(unittest.TestCase):
                             [
                                 dict(
                                     stage_units_in_meters=1.0,
-                                    physics_dt=1 / 60,
+                                    physics_dt=physics_dt,
                                     rendering_dt=1 / 30,
                                 )
                             ],

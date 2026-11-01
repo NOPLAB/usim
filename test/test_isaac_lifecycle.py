@@ -47,6 +47,8 @@ def test_worker_result_required_and_owned_files_removed(tmp_path, output, passes
         assert data['port']['world_index'] == str((tmp_path / 'index.json').resolve())
         assert data['port']['residency_radius'] == 65.0
         assert data['port']['preview_hz'] == 5.0
+        assert data['port']['physics_dt'] == 0.001
+        assert data['port']['lidar_mode'] == 'rtx'
         assert Path(data['stop_file']).parent == configurations[-1].parent
         assert kwargs['stdin'] is subprocess.DEVNULL
         return process
@@ -54,7 +56,13 @@ def test_worker_result_required_and_owned_files_removed(tmp_path, output, passes
     with patch('usim_isaacsim.runner.subprocess.Popen', side_effect=launch):
         index = tmp_path / 'index.json'
         index.write_text('[]')
-        port = IsaacSimulator(world_index=index, residency_radius=65.0, preview_hz=5.0)
+        port = IsaacSimulator(
+            world_index=index,
+            residency_radius=65.0,
+            preview_hz=5.0,
+            physics_dt=0.001,
+            lidar_mode='rtx',
+        )
         if passes:
             port.run(SimulationConfig(world, robot))
         else:
@@ -160,6 +168,8 @@ def test_worker_deserializes_wheel_groups_as_tuples(tmp_path):
                     'world_index': str(tmp_path / 'index.json'),
                     'residency_radius': 65.0,
                     'preview_hz': 5.0,
+                    'physics_dt': 0.001,
+                    'lidar_mode': 'rtx',
                 },
                 'stop_file': str(tmp_path / 'stop'),
                 'asset_directory': str(tmp_path),
@@ -177,6 +187,17 @@ def test_worker_deserializes_wheel_groups_as_tuples(tmp_path):
     assert port.world_index == tmp_path / 'index.json'
     assert port.residency_radius == 65.0
     assert port.preview_hz == 5.0
+    assert port.physics_dt == 0.001
+    assert port.lidar_mode == 'rtx'
     assert restored == config
     assert isinstance(restored.left_joints, tuple)
     assert isinstance(restored.right_joints, tuple)
+
+
+def test_rtx_rejects_planar_scan_contract_before_starting_sdk(tmp_path):
+    with patch('usim_isaacsim.runner.subprocess.Popen') as launch:
+        with pytest.raises(ValueError, match='PointCloud2'):
+            IsaacSimulator(lidar_mode='rtx').run(
+                SimulationConfig(tmp_path / 'world', tmp_path / 'robot', lidar_enabled=True)
+            )
+    launch.assert_not_called()

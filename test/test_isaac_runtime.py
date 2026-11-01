@@ -186,6 +186,25 @@ class BridgeTest(unittest.TestCase):
         self.assertEqual(bridge.points_pub.messages, [cloud])
         self.assertEqual(bridge.tf_pub.messages, [])
 
+    def test_point_cloud_measured_intensity_stays_aligned_with_finite_xyz(self):
+        bridge = self.module.Bridge(camera_enabled=False, lidar_enabled=True, lidar_points=True)
+        cloud = bridge.publish_points(
+            'stamp',
+            [[1, 2, 3], [np.inf, 0, 0], [4, 5, 6], [7, 8, 9]],
+            [0.25, 0.5, np.nan, 0.75],
+        )
+        self.assertEqual((cloud.width, cloud.point_step, cloud.row_step), (2, 16, 32))
+        self.assertEqual(
+            [(field.name, field.offset) for field in cloud.fields],
+            [('x', 0), ('y', 4), ('z', 8), ('intensity', 12)],
+        )
+        np.testing.assert_array_equal(
+            np.frombuffer(cloud.data, dtype='<f4').reshape(-1, 4),
+            [[1, 2, 3, 0.25], [7, 8, 9, 0.75]],
+        )
+        with self.assertRaisesRegex(ValueError, 'point count'):
+            bridge.publish_points('stamp', [[1, 2, 3]], [])
+
     def test_scan_uses_external_robot_state_publisher_transform(self):
         from usim.simulation import Ros2Config
 
