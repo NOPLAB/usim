@@ -122,6 +122,71 @@ def test_multiline_lidar_stages_native_cloud_sensor(
         assert plugin is None
 
 
+@pytest.mark.parametrize('ros_enabled', [True, False])
+def test_gpu_lidar_preserves_requested_grid_and_physics(
+    config: SimulationConfig, tmp_path: Path, ros_enabled: bool
+) -> None:
+    lidar = GazeboLidarConfig(
+        'base_link',
+        'scanner_frame',
+        '/scanner/points',
+        horizontal_samples=720,
+        vertical_samples=28,
+        min_vertical_angle=math.radians(-7),
+        max_vertical_angle=math.radians(52),
+        range_min=0.1,
+        range_max=70.0,
+        output_type='PointCloud2',
+        sensor_type='gpu_ray',
+    )
+    before = config.robot_urdf.read_bytes(), config.world.read_bytes()
+    directory = tmp_path / 'gpu'
+    prepare_assets(
+        replace(config, camera_enabled=False, ros=config.ros if ros_enabled else None),
+        directory,
+        GazeboAssetConfig('/private/gpu/cmd_vel', lidar),
+    )
+    sensor = ET.parse(directory / 'robot.urdf').find(
+        "gazebo[@reference='base_link']/sensor[@name='usim_lidar']"
+    )
+    assert sensor is not None and sensor.get('type') == 'gpu_ray'
+    assert float(sensor.findtext('update_rate', '')) == 10.0
+    for axis, samples, minimum, maximum in (
+        ('horizontal', 720, -math.pi, math.pi),
+        ('vertical', 28, math.radians(-7), math.radians(52)),
+    ):
+        assert int(sensor.findtext(f'ray/scan/{axis}/samples', '')) == samples
+        assert sensor.findtext(f'ray/scan/{axis}/resolution') == '1'
+        assert float(sensor.findtext(f'ray/scan/{axis}/min_angle', '')) == minimum
+        assert float(sensor.findtext(f'ray/scan/{axis}/max_angle', '')) == maximum
+    assert float(sensor.findtext('ray/range/min', '')) == 0.1
+    assert float(sensor.findtext('ray/range/max', '')) == 70.0
+    plugin = sensor.find('plugin')
+    if ros_enabled:
+        assert plugin is not None
+        assert plugin.get('filename') == 'libgazebo_ros_velodyne_laser.so'
+        assert plugin.findtext('ros/remapping') == '~/out:=/scanner/points'
+        assert plugin.findtext('frame_name') == 'scanner_frame'
+        assert plugin.findtext('organize_cloud') == 'true'
+        assert float(plugin.findtext('min_range', '')) == 0.1
+        assert float(plugin.findtext('max_range', '')) == 70.0
+        assert float(plugin.findtext('gaussian_noise', '')) == 0
+        assert plugin.find('min_intensity') is None
+        assert plugin.find('output_type') is None
+    else:
+        assert plugin is None
+    assert ET.canonicalize(from_file=directory / 'world.sdf', strip_text=True) == ET.canonicalize(
+        from_file=config.world, strip_text=True
+    )
+    original = ET.parse(config.robot_urdf).getroot()
+    staged = ET.parse(directory / 'robot.urdf').getroot()
+    for tag in ('link', 'joint'):
+        assert [ET.canonicalize(ET.tostring(e), strip_text=True) for e in staged.findall(tag)] == [
+            ET.canonicalize(ET.tostring(e), strip_text=True) for e in original.findall(tag)
+        ]
+    assert (config.robot_urdf.read_bytes(), config.world.read_bytes()) == before
+
+
 @pytest.mark.parametrize(
     'change',
     [
@@ -146,6 +211,8 @@ def test_multiline_lidar_stages_native_cloud_sensor(
         {'vertical_samples': 2, 'output_type': 'PointCloud2'},
         {'vertical_samples': 2, 'max_vertical_angle': 0.2},
         {'output_type': 'PointCloud'},
+        {'sensor_type': 'gpu_ray'},
+        {'sensor_type': 'other', 'output_type': 'PointCloud2'},
         {'min_angle': 1.0, 'max_angle': 1.0},
         {'min_angle': -4.0, 'max_angle': 4.0},
         {'max_angle': math.nan},

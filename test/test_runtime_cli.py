@@ -114,9 +114,11 @@ def test_wslg_gpu_requires_the_gazebo_backend(runner):
     factory.assert_not_called()
 
 
-def test_multiline_lidar_cli_forwarding(runner):
+@pytest.mark.parametrize('sensor_type', [None, 'gpu_ray'])
+def test_multiline_lidar_cli_forwarding(runner, sensor_type):
     # Given the installed CLI's generic 3D lidar options.
     _, factory = runner
+    selection = () if sensor_type is None else ('--lidar-sensor-type', sensor_type)
     args = arguments(
         '--backend',
         'gazebo',
@@ -134,6 +136,7 @@ def test_multiline_lidar_cli_forwarding(runner):
         '-0.12217304763960307',
         '--lidar-max-vertical-angle',
         '0.9075712110370514',
+        *selection,
     )
     # When the command selects the installed Gazebo runner.
     args.handler(args)
@@ -146,6 +149,7 @@ def test_multiline_lidar_cli_forwarding(runner):
         min_vertical_angle=-0.12217304763960307,
         max_vertical_angle=0.9075712110370514,
         output_type='PointCloud2',
+        sensor_type=sensor_type or 'ray',
     )
 
 

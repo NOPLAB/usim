@@ -90,3 +90,39 @@ or service rejection is an error, never a successful no-op. The default image na
 GPU execution, GUI rendering, multi-world batching, and episode reset/step are not
 provided by this grouped adapter. Fixture tests cover its protocol and service
 mapping; native container physics/rendering still requires an explicit native run.
+
+### Optional GPU LiDAR in the continuous container runner
+
+`GazeboSimulator(lidar=GazeboLidarConfig(..., sensor_type='gpu_ray',
+output_type='PointCloud2'), wslg_gpu=True)` opts into native GPU rays.
+The default remains `sensor_type='ray'`. The GPU sensor retains the caller's
+horizontal/vertical samples, angular bounds, update rate, and range bounds.
+It does not change world geometry, collisions, or physics.
+
+The runtime image needs `ros-humble-velodyne-gazebo-plugins`. Humble's
+Velodyne 2.0.3 builds `libgazebo_ros_velodyne_laser.so`, a single ROS 2
+transport-based plugin for both CPU and GPU sensors, not the ROS 1
+`libgazebo_ros_velodyne_gpu_laser.so` name. The plugin publishes native
+XYZ, intensity, ring, and time fields on the requested topic and frame.
+Organized output preserves invalid returns as NaN; this plugin orders the
+cloud with vertical samples as width and horizontal samples as height.
+No additional intensity clipping or noise is applied.
+
+Build the optional layer after the base `usim-gazebo:local` image:
+
+```sh
+docker build -f packages/gazebo/Dockerfile -t usim-gazebo:gpu-lidar .
+```
+
+Select it with `GazeboSimulator(image='usim-gazebo:gpu-lidar', ...)`.
+
+With WSLg, set `DISPLAY` and optionally `MESA_D3D12_DEFAULT_ADAPTER_NAME`;
+`wslg_gpu=True` passes the existing native device and library mounts.
+It also supports `headless=True`: only `gzserver` runs, using the WSLg
+display for sensors, without Xvfb or forced software GL. CPU headless
+camera rendering continues to use Xvfb and software GL. GPU rays without
+WSLg use the existing virtual-display rendering path when headless,
+even if the camera is disabled.
+
+This opt-in is backend-owned Python API configuration. The grouped
+`Backend.open()` sensor interface remains unchanged.

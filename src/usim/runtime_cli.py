@@ -73,6 +73,7 @@ def run(args) -> None:
             'min_vertical_angle',
             'max_vertical_angle',
             'output_type',
+            'sensor_type',
         )
         if getattr(args, 'lidar_' + field, None) is not None
     }
@@ -251,5 +252,6 @@ def register(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> N
     simulate.add_argument('--lidar-horizontal-samples', type=int)
     simulate.add_argument('--lidar-vertical-samples', type=int)
     simulate.add_argument('--lidar-output-type', choices=('LaserScan', 'PointCloud2'))
+    simulate.add_argument('--lidar-sensor-type', choices=('ray', 'gpu_ray'))
     simulate.set_defaults(handler=run)
     register_world(commands)

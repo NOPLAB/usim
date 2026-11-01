@@ -47,6 +47,7 @@ class GazeboLidarConfig:
     min_vertical_angle: float = 0.0
     max_vertical_angle: float = 0.0
     output_type: Literal['LaserScan', 'PointCloud2'] = 'LaserScan'
+    sensor_type: Literal['ray', 'gpu_ray'] = 'ray'
 
     def __post_init__(self) -> None:
         for name in ('link_name', 'frame_name', 'topic'):
@@ -74,6 +75,10 @@ class GazeboLidarConfig:
             if type(value) is not int or value < 1:
                 raise ConfigurationError(f'lidar.{name}')
         if self.output_type not in ('LaserScan', 'PointCloud2'):
+            raise ConfigurationError('lidar.output_type')
+        if self.sensor_type not in ('ray', 'gpu_ray'):
+            raise ConfigurationError('lidar.sensor_type')
+        if self.sensor_type == 'gpu_ray' and self.output_type != 'PointCloud2':
             raise ConfigurationError('lidar.output_type')
         if not -math.pi / 2 <= self.min_vertical_angle <= self.max_vertical_angle <= math.pi / 2:
             raise ConfigurationError('lidar.max_vertical_angle')
@@ -152,8 +157,6 @@ class GazeboSimulator:
     ) -> None:
         if stop is not None and stop.is_set():
             return
-        if self.wslg_gpu and configuration.headless:
-            raise ConfigurationError('wslg_gpu requires headless=False')
         name = 'usim-gazebo-' + uuid.uuid4().hex
         with tempfile.TemporaryDirectory(prefix='usim-gazebo-') as temporary:
             directory = Path(temporary)
@@ -199,6 +202,10 @@ class GazeboSimulator:
                 '--env',
                 'GAZEBO_MODEL_PATH=' + ':'.join(model_paths),
             ]
+            if self.lidar is not None and self.lidar.sensor_type == 'gpu_ray':
+                command.extend(('--env', 'USIM_GAZEBO_GPU_LIDAR=1'))
+            if self.wslg_gpu:
+                command.extend(('--env', 'USIM_GAZEBO_WSLG_GPU=1'))
             for variable in _PASSTHROUGH:
                 if variable in os.environ:
                     command.extend(('--env', variable + '=' + os.environ[variable]))
@@ -217,9 +224,9 @@ class GazeboSimulator:
                     inputs.append((out_dir, '/output'))
                 else:
                     command.extend(('--mount', f'type=bind,source={out_dir},target=/output'))
-            if not configuration.headless:
+            if not configuration.headless or self.wslg_gpu:
                 if not os.environ.get('DISPLAY'):
-                    raise ValueError('GUI requires DISPLAY; use headless=True for Xvfb')
+                    raise ValueError('GUI or WSLg GPU rendering requires DISPLAY')
                 command.extend(('--env', 'DISPLAY=' + os.environ['DISPLAY']))
                 if self.wslg_gpu:
                     command.extend(

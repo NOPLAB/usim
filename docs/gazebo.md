@@ -74,12 +74,33 @@ SELinux labels on bind mounts were not verified.
 
 ### WSLg GPU rendering
 
-For a GUI on a WSLg Docker host, `GazeboSimulator(wslg_gpu=True)` or the installed
+For rendering on a WSLg Docker host, `GazeboSimulator(wslg_gpu=True)` or the installed
 CLI's `--wslg-gpu` passes `/dev/dxg` and the host's `/usr/lib/wsl` libraries to
-the container. This requires `headless=False` and the existing `DISPLAY`
-connection. Missing host devices or libraries are engine errors, not a silent
+the container. This requires an existing `DISPLAY` connection. With
+`headless=True`, sensors use that connection without launching `gzclient` or
+forcing software GL. Missing host devices or libraries are engine errors, not a silent
 software-rendering fallback. Set `MESA_D3D12_DEFAULT_ADAPTER_NAME` to select an
 adapter, for example `NVIDIA`; the value is forwarded only in this mode.
+
+For native GPU PointCloud2, set `GazeboLidarConfig(sensor_type='gpu_ray',
+output_type='PointCloud2', ...)` or use `--lidar-sensor-type gpu_ray` with the
+existing lidar CLI options. The default remains CPU `ray`. This continuous
+runner mode requires the optional `packages/gazebo/Dockerfile` image layer.
+It uses the Humble Velodyne transport plugin and Gazebo's `--lockstep` so
+rendering cannot silently reduce the requested scan rate in simulation time.
+Sensor rendering can become ready after model spawning; wait for actual
+PointCloud2 messages, not just the spawn acknowledgement.
+
+The GPU layer also fixes the Gazebo Classic second-pass output canvas to rasterize
+ray vertices at pixel centers. Boundary placement shifted range samples by one
+output column and row under the verified WSLg renderer, while the ROS cloud still
+labeled them with the requested angles. This is a rendering-index correction,
+not a calibrated rotation or range adjustment: the ray grid, poses and world
+geometry remain unchanged. In a stationary four-wall scene with inner planes
+20 m from the origin, the same 720-by-28 configuration measured 0.514 m RMS
+plane error before the fix and 0.0050 m afterwards; CPU rays measured 0.000040 m.
+Rebuild the optional GPU image layer to apply the shader; Python-only restaging
+cannot update files supplied by the native image.
 
 ### ROS transport configuration
 

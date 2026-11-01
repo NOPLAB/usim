@@ -234,12 +234,29 @@ def test_wslg_gpu_passes_device_libraries_and_selected_adapter(
     assert 'MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA' in create
 
 
-def test_wslg_gpu_rejects_headless_before_creating_a_container(
-    config: SimulationConfig, container_cli: ContainerCli
+def test_wslg_gpu_headless_preserves_native_display(
+    config: SimulationConfig, container_cli: ContainerCli, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from usim.simulation import ConfigurationError
+    monkeypatch.setenv('DISPLAY', 'wslg:0')
+    lidar = GazeboLidarConfig(
+        'base_link', 'laser', '/points', sensor_type='gpu_ray', output_type='PointCloud2'
+    )
+    GazeboSimulator(wslg_gpu=True, lidar=lidar).run(
+        replace(config, headless=True, camera_enabled=False)
+    )
+    create = container_cli.commands[0]
+    assert 'USIM_GAZEBO_WSLG_GPU=1' in create
+    assert 'USIM_GAZEBO_GPU_LIDAR=1' in create
+    assert 'DISPLAY=wslg:0' in create
+    assert '/dev/dxg' in create
+    assert not any('LIBGL_ALWAYS_SOFTWARE' in item for item in create)
 
-    with pytest.raises(ConfigurationError, match='wslg_gpu'):
+
+def test_wslg_gpu_requires_display_before_creating_a_container(
+    config: SimulationConfig, container_cli: ContainerCli, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv('DISPLAY', raising=False)
+    with pytest.raises(ValueError, match='DISPLAY'):
         GazeboSimulator(wslg_gpu=True).run(replace(config, headless=True))
     assert container_cli.commands == []
 

@@ -49,6 +49,14 @@ def _terminate(process: subprocess.Popen[bytes]) -> None:
             pass
 
 
+def _requires_xvfb(config: SimulationConfig) -> bool:
+    return (
+        config.headless
+        and (config.camera_enabled or os.environ.get('USIM_GAZEBO_GPU_LIDAR') == '1')
+        and os.environ.get('USIM_GAZEBO_WSLG_GPU') != '1'
+    )
+
+
 def run(
     config: SimulationConfig,
     private_topic: str,
@@ -117,7 +125,7 @@ def run(
 
     try:
         display_process = None
-        if config.headless and config.camera_enabled:
+        if _requires_xvfb(config):
             read_fd, write_fd = os.pipe()
             try:
                 display_process = subprocess.Popen(
@@ -153,6 +161,8 @@ def run(
             [
                 'gzserver',
                 '--verbose',
+                # GPU rendering must not fall behind the configured simulated scan cadence.
+                *(['--lockstep'] if os.environ.get('USIM_GAZEBO_GPU_LIDAR') == '1' else []),
                 str(config.world),
                 '-s',
                 'libgazebo_ros_init.so',

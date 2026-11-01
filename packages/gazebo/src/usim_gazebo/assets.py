@@ -55,6 +55,9 @@ class LidarAssetConfig(Protocol):
     @property
     def output_type(self) -> Literal['LaserScan', 'PointCloud2']: ...
 
+    @property
+    def sensor_type(self) -> Literal['ray', 'gpu_ray']: ...
+
 
 @dataclass(frozen=True, slots=True)
 class GazeboAssetConfig:
@@ -261,7 +264,7 @@ def prepare_assets(
 
 def _lidar(robot: ET.Element, lidar: LidarAssetConfig, *, ros_enabled: bool) -> None:
     gazebo = ET.SubElement(robot, 'gazebo', reference=lidar.link_name)
-    sensor = ET.SubElement(gazebo, 'sensor', name='usim_lidar', type='ray')
+    sensor = ET.SubElement(gazebo, 'sensor', name='usim_lidar', type=lidar.sensor_type)
     ET.SubElement(sensor, 'always_on').text = 'true'
     ET.SubElement(sensor, 'visualize').text = 'false'
     ET.SubElement(sensor, 'update_rate').text = str(lidar.update_rate)
@@ -284,12 +287,27 @@ def _lidar(robot: ET.Element, lidar: LidarAssetConfig, *, ros_enabled: bool) -> 
     ET.SubElement(range_element, 'resolution').text = '0.01'
     if ros_enabled:
         plugin = ET.SubElement(
-            sensor, 'plugin', name='usim_lidar_ros', filename='libgazebo_ros_ray_sensor.so'
+            sensor,
+            'plugin',
+            name='usim_lidar_ros',
+            filename=(
+                'libgazebo_ros_velodyne_laser.so'
+                if lidar.sensor_type == 'gpu_ray'
+                else 'libgazebo_ros_ray_sensor.so'
+            ),
         )
         ros_element = ET.SubElement(plugin, 'ros')
         ET.SubElement(ros_element, 'namespace').text = '/'
         ET.SubElement(ros_element, 'remapping').text = f'~/out:={lidar.topic}'
-        ET.SubElement(plugin, 'output_type').text = 'sensor_msgs/' + lidar.output_type
+        if lidar.sensor_type == 'gpu_ray':
+            # ROS 2 Velodyne 2.0.3 uses one transport-based plugin for CPU and GPU rays.
+            # Preserve every ray (invalid returns remain NaN) and native intensity.
+            ET.SubElement(plugin, 'organize_cloud').text = 'true'
+            ET.SubElement(plugin, 'min_range').text = str(lidar.range_min)
+            ET.SubElement(plugin, 'max_range').text = str(lidar.range_max)
+            ET.SubElement(plugin, 'gaussian_noise').text = '0.0'
+        else:
+            ET.SubElement(plugin, 'output_type').text = 'sensor_msgs/' + lidar.output_type
         ET.SubElement(plugin, 'frame_name').text = lidar.frame_name
 
 
