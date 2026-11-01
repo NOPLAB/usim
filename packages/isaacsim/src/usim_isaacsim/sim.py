@@ -116,6 +116,8 @@ class IsaacSimulator:
         world_index: Path | None = None,
         residency_radius: float = 60.0,
         preview_hz: float = 30.0,
+        physics_dt: float = 1 / 60,
+        lidar_mode: str = 'physx',
         optical_frame: str = 'camera_link',
         lidar_frame: str = 'lidar_link',
         python: str = sys.executable,
@@ -142,6 +144,12 @@ class IsaacSimulator:
         if not math.isfinite(preview_hz) or preview_hz <= 0:
             raise ValueError('preview_hz must be finite and positive')
         self.preview_hz = preview_hz
+        if not math.isfinite(physics_dt) or physics_dt <= 0:
+            raise ValueError('physics_dt must be finite and positive')
+        self.physics_dt = physics_dt
+        if lidar_mode not in ('physx', 'rtx'):
+            raise ValueError('lidar_mode must be physx or rtx')
+        self.lidar_mode = lidar_mode
         self.optical_frame = optical_frame
         self.lidar_frame = lidar_frame
         self.python = python
@@ -149,6 +157,12 @@ class IsaacSimulator:
     def run(self, configuration: SimulationConfig, *, stop: Event | None = None) -> None:
         if stop is not None and stop.is_set():
             return
+        if (
+            self.lidar_mode == 'rtx'
+            and configuration.lidar_enabled
+            and configuration.lidar_vertical_angles is None
+        ):
+            raise ValueError('RTX lidar outputs PointCloud2; configure lidar_vertical_angles')
         for path in (configuration.world, configuration.robot_urdf):
             if not path.is_file():
                 raise ValueError(f'missing asset: {path}')
@@ -181,6 +195,7 @@ def _run(
     contact_subscription = None
     contacts_saved = False
     bridge = None
+    rtx_lidar = None
     ros_started = False
     stop = stop if stop is not None else Event()
     app = SimulationApp(
@@ -233,7 +248,7 @@ def _run(
         if not Path(robot_usd).is_file():
             raise RuntimeError('robot URDF import failed')
 
-        world = World(stage_units_in_meters=1.0, physics_dt=1 / 60, rendering_dt=1 / 30)
+        world = World(stage_units_in_meters=1.0, physics_dt=port.physics_dt, rendering_dt=1 / 30)
         add_reference_to_stage(str(args.world.resolve()), port.environment_prim_path)
         add_reference_to_stage(str(robot_usd), port.robot_prim_path)
         stage = omni.usd.get_context().get_stage()
@@ -367,9 +382,14 @@ def _run(
             )
         query = None
         if args.lidar_enabled:
-            from omni.physx import get_physx_scene_query_interface
+            if port.lidar_mode == 'rtx':
+                from usim_isaacsim.rtx_lidar import RtxLidar
 
-            query = get_physx_scene_query_interface()
+                rtx_lidar = RtxLidar(args, world)
+            else:
+                from omni.physx import get_physx_scene_query_interface
+
+                query = get_physx_scene_query_interface()
         camera = None
         if args.camera_enabled:
             enable_extension('isaacsim.sensors.camera')
@@ -411,7 +431,7 @@ def _run(
         last_camera = 0.0
         last_preview = -math.inf
         last_completed_camera_time = -math.inf
-        last_scan = -math.inf
+        last_scan = world.current_time if rtx_lidar is not None else -math.inf
         scan_frames = 0
         steps = 0
         camera_frames = 0
@@ -491,10 +511,10 @@ def _run(
                 camera.pause()
                 if capture:
                     camera.resume()
-            world.step(render=render)
-            if render and not args.headless:
+            world.step(render=render and rtx_lidar is None)
+            if render and not args.headless and rtx_lidar is None:
                 last_preview = render_time
-            if camera is not None:
+            if camera is not None and rtx_lidar is None:
                 camera.pause()
             if command != (0.0, 0.0):
                 joint_velocity = robot.get_joint_velocities()[wheel_indices]
@@ -524,7 +544,21 @@ def _run(
                     ),
                 )
                 stamp = bridge.publish_state(state)
-            if query is not None and world.current_time - last_scan >= 1 / args.lidar_hz:
+            if rtx_lidar is not None:
+                scan_due = world.current_time - last_scan >= 1 / args.lidar_hz
+                if render or scan_due:
+                    cloud = rtx_lidar.capture(position, orientation)
+                    if render and not args.headless:
+                        last_preview = render_time
+                    if camera is not None:
+                        camera.pause()
+                    if scan_due:
+                        last_scan = world.current_time
+                    if cloud is not None:
+                        if bridge is not None:
+                            bridge.publish_points(stamp, *cloud)
+                        scan_frames += 1
+            elif query is not None and world.current_time - last_scan >= 1 / args.lidar_hz:
                 if args.lidar_vertical_angles is not None:
                     points = _lidar_points(
                         query, position, orientation, args, port.robot_prim_path
@@ -631,6 +665,8 @@ def _run(
             if contact_log is not None and not contacts_saved:
                 contact_log.save(port.contact_out)
         finally:
+            if rtx_lidar is not None:
+                rtx_lidar.close()
             if bridge is not None:
                 bridge.destroy_node()
             if ros_started:
