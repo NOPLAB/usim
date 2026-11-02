@@ -35,7 +35,7 @@ pipeline = [
   "scikit-image==0.26.0; python_version >= '3.14'",
   "shapely==2.1.2",
   "pymeshlab==2025.7.post1",
-  "matplotlib==3.10.8",
+  "matplotlib==3.11.2",
   "anyio==4.14.2",
   "typing-extensions==4.16.0",
 ]
