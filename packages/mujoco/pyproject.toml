@@ -3,7 +3,7 @@ name = "usim-mujoco"
 version = "0.1.0"
 description = "Native MuJoCo CPU and MuJoCo Warp CUDA engines for usim"
 license = "MIT"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.15,<3.16"
 dependencies = ["usim==0.1.0"]
 
 [project.optional-dependencies]
